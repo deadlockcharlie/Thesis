@@ -1,4 +1,8 @@
 {
     "latex-workshop.latex.autoBuild.run": "onSave",
-    "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false
+    "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
+    "cSpell.words": [
+        "Saalik",
+        "Sopena"
+    ]
 }

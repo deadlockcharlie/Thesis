@@ -5,7 +5,11 @@
 \label{chap:abstract}
 
 \vspace*{8mm}
-...
+Hierarchies serve as fundamental structures across various disciplines, modeling hierarchical relationships in computer science, biology, social networks, and logistics. However, the dynamic and concurrent updates in real-world systems necessitate synchronization techniques for maintaining data consistency despite concurrent access. This paper explores a novel approach called CALock to synchronize operations on hierarchies by utilizing a labeling scheme that facilitates multi-granularity locking.
+
+Our approach addresses both concurrent data reads and writes as well as structural modifications. CALock exploits the hierarchical topology via a new labeling scheme to identify the common ancestors of vertices. This enables a thread to identify an appropriate lock granule for its lock request. Leveraging variable lock granularities optimizes operations across the hierarchy while ensuring consistency and performance.
+
+We provide a detailed discussion of the CALock labeling and the locking algorithm, prove its properties, and evaluate it experimentally. On static hierarchies CALock remains competitive with previous labeling schemes and has better concurrency and throughput when structural modifications change the hierarchy. In particular, CALock improves throughput by 4.5$\times$, and response time by 1.5$\times$ for workloads that contain structural modifications.
 
 \textbf{Keywords:} 
-K1, K2, K3, K4, K5
+Multi-granularity locking, Hierarchical data, Graphs, Locking, Synchronization, Graph topology, Ancestors. 

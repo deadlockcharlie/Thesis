@@ -2,7 +2,7 @@
 %
 % ------------------------------------  --> cover title page
 
-\newcommand{\jurymember}[5]{\hspace{1.5em}\textbf{{#1} \textsc{{#2}}}, {#3}, {#4} \hfill \textit{{#5}}\\}
+\newcommand{\jurymember}[5]{\hspace{1.5em}\textbf{{#1} \textsc{{#2}}}, { \scriptsize  #3}, { \scriptsize  #4} \hfill \textit{{#5}}\\}
 
 \newgeometry{left=2.8cm, right=2.5cm, top=2cm, bottom=2cm}
 \begin{titlepage}
@@ -12,9 +12,9 @@
       \hfill
 	  % TODO: replace with your Lab logo
       \includegraphics[height=1.7cm]{figures/LogoLIP6.pdf}
-      \hfill
+    %   \hfill
 	  % TODO: replace with your Team logo
-      \includegraphics[height=1.7cm]{figures/inria.pdf}
+    %   \includegraphics[height=1.7cm]{figures/inria.pdf}
 	  % TODO: you may add your company logo if you are a CIFRE PhD Student
 	  % \hfill
       % \includegraphics[height=1.7cm]{figures/cifre-logo.pdf}
@@ -53,13 +53,17 @@
 		% TODO: jury members should follow two orders:
 		%% 1- Role: Reviewer -> Jury -> Guest -> Advisor
 		%% 2- For each role, alphabetical order
-		\jurymember{Prénom}{Nom}{Poste}{Université}{Role dans le jury}
+		% \jurymember{Prénom}{Nom}{Poste}{Université}{Role dans le jury}
 		\jurymember{Jean-Michel}{Dupont}{Professeur}{Sorbonne Université}{Rapporteur}
 		\jurymember{Alice}{Dupont}{Directrice de Recherche}{CNRS}{Examinatrice}
 		\jurymember{Jean-Michel}{Dupont}{Professeur}{Sorbonne Université}{Examinateur}
 		\jurymember{Pierre}{AAA}{Maître de conférences}{UPMC}{Examinateur}
-		\jurymember{Patrice}{Balkany}{Software Engineer}{Google}{Invité}
-		\jurymember{Jean-Michel}{Encadrant}{Directeur de Recherche}{Sorbonne Université, LIP6}{Directeur de thèse}
+		% \jurymember{Patrice}{Balkany}{Software Engineer}{Google}{Invité}
+		\jurymember{Mesaac}{Makpangou}{Chargé de Recherche [HDR]}{INRIA}{Directeur de thèse}
+		\jurymember{Marc}{Shapiro}{Directeur de Recherche Émérite}{INRIA, Sorbonne Université, LIP6}{Directeur de thèse}
+		\jurymember{Julien}{Sopena}{Maître de Conférences}{Sorbonne Université, LIP6}{Encadrant}
+		\jurymember{Swan}{Dubois}{Maître de Conférences}{Sorbonne Université, LIP6}{Encadrant}
+		
 	\end{flushleft}
 \end{titlepage}
 \restoregeometry
