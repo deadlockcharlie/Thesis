@@ -16,8 +16,37 @@
     captions=tableabove,    % display table captions above the float env
     chapterprefix=false,    % do not display a prefix for chapters
     appendixprefix=false,   % but display a prefix for appendix chapter
-    draft=true,            % value for draft version
+    draft=false,            % value for draft version
 ]{scrreprt}%
+
+% **************************************************
+\usepackage{listings}
+\usepackage{algorithm}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{pgfplots}
+\usepackage{tikz}
+\usetikzlibrary{
+	external,
+	er,
+	matrix,
+	positioning}
+
+\newcommand{\StatexIndent}[1][3]{%
+	\setlength\@tempdima{\algorithmicindent}%
+	\Statex\hskip\dimexpr#1\@tempdima\relax}
+
+\usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{pifont}
+\usepackage{booktabs}
+
+
+\lstset{keywordstyle=\sffamily\color{red},language=C}
+\def\inline{\lstinline[basicstyle=\ttfamily,keywordstyle={}]}
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
 
 % **************************************************
 % Setup YOUR thesis document in this file !
@@ -62,8 +91,8 @@
 
 \pagestyle{plain}				% display just page numbers
 %
-\input{content/front/remerciements.tex} % INCLUDE: acknowledgement
-\cleardoublepage
+% \input{content/front/remerciements.tex} % INCLUDE: acknowledgement
+% \cleardoublepage
 %
 \input{content/front/abstract-en}	% INCLUDE: the abstracts (english)
 \clearpage
@@ -75,6 +104,7 @@
 \tableofcontents				% display table of contents
 \cleardoublepage
 
+
 % --------------------------
 % Body matter
 % --------------------------
@@ -82,24 +112,38 @@
 \pagenumbering{arabic}			% arabic page numbering starts from Body
 \pagestyle{scrheadings}			% header and footer style
 
+\listoffigures
+\cleardoublepage
+
+\listoftables
+\cleardoublepage
+
+\lstlistoflistings
+\cleardoublepage
+
 %% Uncomment the following lines using the \part command
 %% to add part sections
 \input{content/introduction}   % INCLUDE: introduction
 
 % \part{Background}
-% \label{part:background}
 \import{content/background}{background}
+
+
+\import{content/relatedwork}{related}
 
 % \part{Formal Fundamentals}
 % \label{part:theory}
 \import{content/theory}{theory}
 
+
 % \part{CALock}
-% \label{part:calock}
 \import{content/calock}{calock}
 
+
+% \part{Implementation}
+\import{content/implementation}{implementation}
+
 % \part{Experimental Evaluation}
-% \label{part:evaluation}
 \import{content/evaluation}{evaluation}
 
 % \part{Conclusion}
@@ -119,24 +163,19 @@
 \newrefcontext[labelprefix={@}]
 \printbibliography[heading=subbibliography,title={Webpages},type=online]
 }
+
+
+% \bibliography{main.bib}
+% \bibliographystyle{acm}
+
 \cleardoublepage
 
 % \input{content/glossary}
 
-\listoffigures
-\cleardoublepage
-
-\listoftables
-\cleardoublepage
-
-\lstlistoflistings
-\cleardoublepage
-
 \appendix
-\input{appendix/resume-fr.tex}
 \cleardoublepage
-
-\clearpage
+% \input{appendix/resume-fr.tex}
+% \cleardoublepage
 
 \newpage
 \mbox{}
