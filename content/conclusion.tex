@@ -4,15 +4,98 @@
 % \label{ch:conclusion}
 
 \chapter{Conclusion} \label{chap:conclusion}
-\section{Summary of Findings}
-Recap of the key findings and achievements of the research.
+\minitoc
 
+A connected structure is a fundamental way of representing data. Semi-structured connected data has become mainstream. First, with the advent of NoSQL stores, and now with the rise of graph databases. These databases are used in a wide range of applications, from social networks to recommendation systems. 
+
+While representing connected data effectively is a problem in itself, managing consistent access to this data is another challenge. Another dimension of complexity is added when the topology of the connected data changes. To guarantee consistency while maintaining performance in the face of these challenges, we need efficient concurrency control mechanisms designed specifically for connected data.
+
+To this end, the first technique was \emph{Intention Locks}. While intention locking has proven its mettle as an effective concurrency control mechanism when managing tree like structures, it has severe limitations when dealing with irregular semi-structured data like hierarchies. Modern \emph{Multi-Granularity Locking} (MGL) techniques have been proposed to address the limitations of intention locks. However, these techniques are not designed to handle the dynamic nature of connected data. They are not efficient in scenarios where the topology of the data changes frequently.
+
+An effective multi-granularity locking mechanism for hierarchical data exploits the topology of the hierarchy to optimize the assignment of lock grains. Intention locks achieve this by using special lock modes to indicate the intention of a transaction to lock a node and its descendants. Newer MGL techniques use a labeling scheme to identify lock grains efficiently.  
+
+In this thesis, we explored the design, implementation, and evaluation of CALock, a novel labelling and concurrency control mechanism for hierarchical data. CALock uses a path based labelling scheme which assigns a label to each vertex in the hierarchy. This label is an ordered set of all \emph{guarding ancestors} of the vertex. Locking one of these guarding ancestors is sufficient to lock the vertex. To minimize the grain size of a lock guard CALock uses the \emph{lowest guarding ancestor} (LGA) of a vertex as the lock guard. To lock multiple vertices, CALock uses the \emph{lowest common guarding ancestor} (LGCA) of the vertices as the lock guard. By using the lowest guarding ancestor as the lock guard, CALock minimizes grain size and maximizes parallelism by reducing the probability of grain overlaps that cause thread blocks.
+
+
+
+
+Our research has demonstrated the effectiveness of CALock in improving system performance and reliability in various scenarios. Through rigorous experimentation and analysis, we have shown that CALock can significantly reduce contention and enhance throughput in multi-threaded environments.
+
+The key contributions of this work include the development of a theoretical framework for CALock, the implementation of a prototype system, and a comprehensive evaluation using benchmark applications. Our findings indicate that CALock outperforms traditional locking mechanisms in terms of scalability and efficiency.
+
+% Looking ahead, there are several avenues for future research. One potential direction is to extend CALock to support distributed systems, where the challenges of concurrency control are even more pronounced. Additionally, further optimization of the CALock algorithm could yield even greater performance improvements. Finally, exploring the integration of CALock with other concurrency control techniques could provide a more holistic solution to the problem of contention in multi-threaded systems.
+
+In our humble opinion, this thesis has made significant strides in advancing the state of the art in concurrency control. The development and evaluation of CALock represent a meaningful contribution to the field, and we hope that this work will inspire further research and innovation in this area.
 \section{Contributions}
-Reiteration of the thesis contributions in the context of the broader field.
+
+\subsection{CALock: Path based labelling scheme}
+Our first contribution is the design of a labelling scheme that effectively captures the topology of a hierarchy. This eliminates the need of traversals to find a guarding ancestor or the lock guard for a lock request. CALock labelling scheme achieves the following: 
+
+\begin{enumerate}
+    \item \emph{Effectively identifying guarding ancestors}: The labelling scheme allows a thread to identify the guarding ancestors of a vertex without traversing the hierarchy.
+    \item \emph{Efficiently finding lock guards}: For a lock request containing one or more vertices, the labels of the vertices are used to find a set of lock guards for that request. This eliminates the need for traversals. 
+    \item \emph{Optimizing the lock guard}: A consideration to minimize grain size is to choose the deepest guarding ancestor as the lock guard. This facilitates a greater degree of parallelism by reducing the probability of grain overlaps that cause thread blocks.
+    \item \emph{Eliminating false subsumptions}: False subsumptions occur when a thread is blocked by a lock guard that is not an ancestor of the vertex it is trying to lock. CALock eliminates false subsumptions because the labelling scheme ensures that the grains are well-defined, and a guard only protects its descendants.
+    \item     \item \emph{Supporting dynamic hierarchies}: The labelling scheme is designed to support dynamic hierarchies. When a structural modification occurs, the labels of the affected vertices are updated to reflect the change. This relabelling can also be parallelized in CALock since only the vertices in the affected grain are relabelled. 
+\end{enumerate}
+
+
+\subsection{CALock: Locking protocol}
+
+The second contribution of our work is a multi-granularity protocol that leverages the CALock labelling scheme to optimize concurrency control in hierarchical data. The lock protocol leverages a \emph{lock object}, which is a set of fields like guard ID, guard label etc., to distinguish lock requests as well as check for conflicts between them. In addition, a lock pool guarantees safety and  fairness in granting lock requests. The CALock protocol achieves the following:
+\begin{enumerate}
+    \item \emph{Efficient lock acquisition}: The CALock protocol allows a thread to acquire a lock on a vertex without traversing the hierarchy by using the LGCA of a target vertex in the lock request. Inserting the ID of the LGCA in the lock pool via a lock object is sufficient to indicate the existence of a lock.
+    \item \emph{Efficient lock conflict detection}: To test for grain overlaps, CALock protocol uses the labels of guards in the lock pool. If the ID of a guard is present in the label of another lock guard, then there is a grain overlap. This significantly reduces the time taken to detect conflicts between lock requests by eliminating traversals or sub-graph matching. 
+    \item \emph{Fair locking}: The CALock protocol ensures fairness in lock acquisition by using a lock pool. Each lock request is assigned a sequence number which is used to determine the order in which locks are granted. This prevents starvation and prevents priority inversion.
+\end{enumerate}
+
+
+
+
+\section{Summary of Findings}
+The evaluation of CALock is conducted through a series of benchmarks designed to measure its performance against other MGL techniques. The key results are summarized here:
+
+\begin{itemize}
+    \item \textbf{Lock throughput improvement:} CALock demonstrates a significant improvement in throughput compared to other MGL techniques. CALock is 4.5 times faster than DomLock and MID, which are the next best MGL techniques, for workloads that consist of only data updates. In workloads that contain structural modifications, CALock is objectively better since DomLock, MID, FlexiGran exhibit extremely poor performance. 
+
+    \item \textbf{Scalability:} The throughput and response time of CALock scales with the number of concurrent threads accessing the hierarchy. Intention locks do not scale at all and so does FlexiGran. The performance DomLock and MID improves slightly until 8 threads but then starts to degrade. 
+    
+    \item \textbf{Reduced lock wait time:} CALock reduces the time threads spend waiting for locks. This is achieved due to two primary reasons. First, the labelling scheme minimizes grain size. Second, the lock protocol does not require traversals to acquire lock and test for conflicts. This results in locks which are not only granted fast but also have a lower probability encountering false subsumptions. 
+
+    \item \textbf{Handling dynamic hierarchies:} CALock labelling is designed to handle dynamic hierarchies. When a structural modification changes the topology of the hierarchy, CALock updates the labels without needing a second lock to relabel unlike DomLock, MID and FlexiGran. This allows for parallel relabelling and ensures that the system remains responsive even when the hierarchy within a locked grain is changing.  
+\end{itemize}
+
+
+The evaluation highlights CALock's significant advantages over existing MGL techniques in terms of throughput, scalability, and adaptability to dynamic hierarchies. By minimizing lock wait times, efficiently handling structural modifications, and scaling effectively with increasing concurrency, CALock addresses the limitations of state-of-the-art approaches like DomLock, MID, and FlexiGran. These results demonstrate that CALock is a robust and efficient solution for hierarchical data synchronization, making it particularly well-suited for workloads involving both data updates and structural changes.
+
 
 \section{Future Work}
-Suggestions for further research and potential enhancements of CALock.
 
-\section{Final Remarks}
-Reflection on the research journey and its impact.
+In this work, we have focussed on the design and implementation of CALock for hierarchical data. There are several avenues of improvement which could benefit from CALock as well as avenues where CALock could be extended.
 
+\subsection{Indexing and querying dimensional data}
+CALock labelling is designed to optimize grain size and guarantee mutual exclusion for lock requests. However, CALock labelling can also be used to optimize indexing and querying in hierarchical data. CALock labels appear similar to a Dewey decimal system \cite{DBLP:journals/jd/Sweeney83} which has proven its efficacy in searching multidimensional data by drilling down using labels. Variants of Dewey decimal system have been developed to improve its efficiency but still, adding a new category or changing classes requires a relabeling of the entire hierarchy. Future work could study the suitability of path based labelling techniques for data involving more than two search dimensions. 
+
+Similarly, for index structures in JSON stores or SQL databases, CALock can be used an effective synchronization mechanism to ensure the consistency of index with data. Similar work has been done by \citet{DBLP:journals/pvldb/FinisBK0MF15} for indexing XML data. Future work should explore avenues of using the concept of LGCA and LGA to optimise hierarhical indices. 
+
+\subsection{Distributed CALock}
+
+CALock is designed for multi-threaded environments. However, the challenges of concurrency control are even more pronounced in distributed systems. While highly available distributed systems wouldn't benefit from multi-granularity locking due to the inherent need for progress even when partitions occur, HPC environments could benefit from CALock. Online scheduling systems like YARN \cite{DBLP:conf/cloud/VavilapalliMDAKEGLSSSCORRB13} can benefit from the effective hierarchical synchronization to manage resources.
+
+CALock can be used in conjunction with the actor model to facilitate effective thread synchronization. \citet{sang_scalable_2020} designed AEON for actor systems developed in C++ which uses a static hierarchy to identify the nod at which an operation involving multiple actors can be synchronized. In actor systems with dynamic membership, this hierarchy can undergo structural changes. CALock can not only be used to guard the synchronization hierarchy against breaking cchanges by preventing actors from joining or leaving the system while in a critical section but also to ensure that the structural changes to a hierarchy are consistently applied across all actors.
+
+Future work should explore the deign and use of CALock for actor model which could be incorporated into an actor framework like Akka \cite{10.5555/2663429}, Orleans \cite{10.1145/2038916.2038932} or be used for an actor based programming language like Erlang \cite{armstrong1991erlang} by incorporating CALock in th BEAM VM.
+
+\subsection{Optimizing CALock for generic graph Systems}
+
+One big drawback of CALock is that it designed for semi-structured data. The locking protocol makes use of a labelling scheme which depends on a hierarchy having a designated root. In most graph system use cases like social media, recommendation systems, and logistics, the underlying graph data is unstructured and often does not have a designated root to start labelling. 
+
+Future work should explore the suitability of CALock labelling for generic graphs by using heuristics about the structure of the graph to designate a root. For example, in a social network, some users have more connections than others. Let's call such a user a \emph{popular} ($\sigma$). Consequently, the probability of a $\sigma$ user having a path to all users is higher than a non-$\sigma$ user. Thus, a $\sigma$ user can be designated as the root of the graph. With this designated root, CALock labelling can be used to optimize concurrency control in graph systems.
+
+A second dimension of structure can be introduced in graphs through workload analysis. For example, in a recommendation system, an edge in the graph has a weight associated with it. With every edge having a weight, the graph consists of paths which are more likely to be traversed than others. We call such paths \emph{hot paths} ($\eta$). A labelling scheme, like that of CALock, can be used to prefer hot paths. In doing so, the locking scheme will provide a higher priority to locks on hot paths. This should in theory lead to better performance. 
+
+
+
+\section{Closing remarks}
+
+Throughout this thesis we delve into the problem of concurrency control in hierarchical data. We have designed, implemented and evaluated CALock, a novel labelling scheme and locking protocol. CALock is designed to optimize concurrency control in hierarchical data by minimizing grain size through its labelling scheme. The evaluation shows promise for CALock in terms of throughput, scalability and response time, especially for dynamic hierarchies where CALock outperforms existing MGL techniques by a significant margin. We believe that CALock is a significant contribution to the field of concurrency control and hope that this work will inspire further research and innovation in this area.

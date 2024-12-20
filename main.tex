@@ -21,6 +21,7 @@
 
 % **************************************************
 \usepackage{listings}
+
 \usepackage{algorithm}
 \usepackage{amsmath}
 \usepackage{graphicx}
@@ -32,6 +33,7 @@
 	matrix,
 	positioning}
 
+\usepackage{subcaption}
 \newcommand{\StatexIndent}[1][3]{%
 	\setlength\@tempdima{\algorithmicindent}%
 	\Statex\hskip\dimexpr#1\@tempdima\relax}
@@ -40,13 +42,29 @@
 \usepackage{amssymb}
 \usepackage{pifont}
 \usepackage{booktabs}
+\usepackage{wrapfig}
+\usepackage{tabularx}
 
 
-\lstset{keywordstyle=\sffamily\color{red},language=C}
+\usepackage{minitoc}
+
+
+
+\lstset{language=C++,
+                basicstyle=\ttfamily,
+                keywordstyle=\color{blue}\ttfamily,
+                stringstyle=\color{red}\ttfamily,
+                commentstyle=\color{green}\ttfamily,
+                morecomment=[l][\color{magenta}]{\#}
+}
 \def\inline{\lstinline[basicstyle=\ttfamily,keywordstyle={}]}
 \newtheorem{definition}{Definition}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
+
+
+
+
 
 % **************************************************
 % Setup YOUR thesis document in this file !
@@ -101,8 +119,11 @@
 %
 \currentpdfbookmark{\contentsname}{toc}
 \setcounter{tocdepth}{2}		% define depth of toc
-\tableofcontents				% display table of contents
+\dominitoc \tableofcontents	
 \cleardoublepage
+
+
+
 
 
 % --------------------------
@@ -121,33 +142,42 @@
 \lstlistoflistings
 \cleardoublepage
 
+
 %% Uncomment the following lines using the \part command
 %% to add part sections
 \input{content/introduction}   % INCLUDE: introduction
 
 % \part{Background}
+% \label{part:background}
 \import{content/background}{background}
 
-
+% \part{Related Work}
+% \label{part:related}
 \import{content/relatedwork}{related}
+
+% \import{content/motivation}{motivation}
 
 % \part{Formal Fundamentals}
 % \label{part:theory}
 \import{content/theory}{theory}
 
 
-% \part{CALock}
+% % \part{CALock}
+% % \label{part:calock}
 \import{content/calock}{calock}
 
+\import{content/properties}{properties}
 
-% \part{Implementation}
+% % \part{Implementation}
+% % \label{part:implementation}
 \import{content/implementation}{implementation}
 
-% \part{Experimental Evaluation}
+% % \part{Experimental Evaluation}
+% % \label{part:evaluation}
 \import{content/evaluation}{evaluation}
 
-% \part{Conclusion}
-% \label{part:conclusion}
+% % \part{Conclusion}
+% % \label{part:conclusion}
 \input{content/conclusion} 
 
 % --------------------------

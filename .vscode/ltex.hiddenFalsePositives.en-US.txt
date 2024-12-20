@@ -1,0 +1,13 @@
+{"rule":"A_INFINITIVE","sentence":"^\\QThe structure of reader-writer locks generally consists of two types of locks: a read lock and a write lock.\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QWhen a thread requests a read lock, it can proceed if no write lock is held; however, if a write lock is active, the requesting thread must wait.\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QWhen a thread requests a write lock, it must wait until there are no active readers or writers.\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QAccording to \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q, \"Multi-granularity locking involves locking a vertex in a hierarchy such that the lock is sufficient to protect the vertex and its descendants i.e. a thread that requests a write (exclusive) lock on a vertex implicitly exclusively locks all its descendants when its request is granted\".\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QFixed grain locking associates a fixed guard for a set of vertices in the hierarchy by dividing the topology into lock bubbles.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QFixed-grain locking associates a fixed guard with a set of target vertices in the hierarchy which from the grain of that guard.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QLevel-based locks form lock grains based on some topological property of the hierarchy.\\E$"}
+{"rule":"PRP_VB","sentence":"^\\QD intervals being post-order and I intervals being reverse post-order.\\E$"}
+{"rule":"MORFOLOGIK_RULE_EN_US","sentence":"^\\QFlexiGran uses the intervals of DomLock as vertex labels and uses vertex depth to determine ancestor-descendent relationships between two identical intervals.\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QIf two fine-grain lock requests are on the same vertex, then they are in conflict if at-least one of the lock requests is for a write lock.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QIn certain cases, the intervals of all vertices are recomputed which is extremely expensive for large hierarchies.\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QIn order to perform a structural modification, a thread acquires a write lock on the LSCA of the affected vertices.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QIn write heavy workloads without structural modifications, CALock is 2 times faster than coarse-grained and medium-grained locks and 4 times faster than DomLock, MID and FlexiGran\\E$"}

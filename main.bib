@@ -33,8 +33,7 @@ inproceedings{cypher,
                   Irving L. Traiger},
   editor       = {Douglas S. Kerr},
   title        = {Granularity of Locks in a Large Shared Data Base},
-  booktitle    = {Proceedings of the International Conference on Very Large Data Bases,
-                  September 22-24, 1975, Framingham, Massachusetts, {USA}},
+  booktitle    = {Proceedings of the International Conference on Very Large Data Bases (VLDB), Framingham, Massachusetts, {USA}},
   pages        = {428--451},
   publisher    = {{ACM}},
   year         = {1975},
@@ -196,6 +195,7 @@ author       = {H{\aa}kan Sundell and
   	journal={SQL Server | Microsoft Learn},
 	publisher={Microsoft},
 	year={2022},
+  author={Microsoft},
 	month={Dec}
  }
 
@@ -206,7 +206,7 @@ author       = {H{\aa}kan Sundell and
                   Tim Harris},
   title        = {DomLock: a new multi-granularity locking technique for hierarchies},
   booktitle    = {Proceedings of the 21st {ACM} {SIGPLAN} Symposium on Principles and
-                  Practice of Parallel Programming, PPoPP 2016, Barcelona, Spain, March
+                  Practice of Parallel Programming (PPoPP), Barcelona, Spain, March
                   12-16, 2016},
   pages        = {23:1--23:12},
   publisher    = {{ACM}},
@@ -220,8 +220,7 @@ author       = {H{\aa}kan Sundell and
 
 
 @article{anjuMID,
-	author       = {M. A. Anju and
-                  Rupesh Nasre},
+	author       = {Mongandampulath Akathoott, Anju and Nasre, Rupesh},
   title        = {Multi-Interval DomLock: Toward Improving Concurrency in Hierarchies},
   journal      = {{ACM} Trans. Parallel Comput.},
   volume       = {9},
@@ -267,8 +266,7 @@ inproceedings{aho1973finding,
                   Thomas R. Gross and
                   Lu{\'{\i}}s Veiga},
   title        = {STMBench7: a benchmark for software transactional memory},
-  booktitle    = {Proceedings of the 2007 EuroSys Conference, Lisbon, Portugal, March
-                  21-23, 2007},
+  booktitle    = {Proceedings of the Second European Conference on Computer Systems (EuroSys), Lisbon, Portugal, March 21-23, 2007},
   pages        = {315--324},
   publisher    = {{ACM}},
   year         = {2007},
@@ -299,8 +297,8 @@ article{carey1993007,
                   Lionel C. Briand and
                   Andr{\'{e}} van der Hoek},
   title        = {Unleashing concurrency for irregular data structures},
-  booktitle    = {36th International Conference on Software Engineering, {ICSE} '14,
-                  Hyderabad, India - May 31 - June 07, 2014},
+  booktitle    = {36th International Conference on Software Engineering (ICSE),
+                  Hyderabad, India, 31 May - 07 June, 2014},
   pages        = {480--490},
   publisher    = {{ACM}},
   year         = {2014},
@@ -384,7 +382,7 @@ article{carey1993007,
   editor       = {Ramin Yahyapour},
   title        = {Toggle: Contention-Aware Task Scheduler for Concurrent Hierarchical
                   Operations},
-  booktitle    = {Euro-Par 2019: Parallel Processing - 25th International Conference
+  booktitle    = {Euro-Par 2019: Parallel Processing: 25th International Conference
                   on Parallel and Distributed Computing, G{\"{o}}ttingen, Germany,
                   August 26-30, 2019, Proceedings},
   series       = {Lecture Notes in Computer Science},
@@ -685,7 +683,7 @@ keywords = {transaction, lock, database, consistency, concurrancy}
                   Jeffrey F. Naughton},
   editor       = {Peter Buneman and
                   Sushil Jajodia},
-  title        = {The oo7 Benchmark},
+  title        = {The OO7 Benchmark},
   booktitle    = {Proceedings of the 1993 {ACM} {SIGMOD} International Conference on
                   Management of Data, Washington, DC, USA, May 26-28, 1993},
   pages        = {12--21},
@@ -701,7 +699,6 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 
 @inproceedings{prokopec_renaissance_2019,
 	address = {New York, NY, USA},
-	series = {{PLDI} 2019},
 	title = {Renaissance: benchmarking suite for parallel applications on the {JVM}},
 	isbn = {978-1-4503-6712-7},
 	shorttitle = {Renaissance},
@@ -709,7 +706,7 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 	doi = {10.1145/3314221.3314637},
 	abstract = {Established benchmark suites for the Java Virtual Machine (JVM), such as DaCapo, ScalaBench, and SPECjvm2008, lack workloads that take advantage of the parallel programming abstractions and concurrency primitives offered by the JVM and the Java Class Library. However, such workloads are fundamental for understanding the way in which modern applications and data-processing frameworks use the JVM's concurrency features, and for validating new just-in-time (JIT) compiler optimizations that enable more efficient execution of such workloads. We present Renaissance, a new benchmark suite composed of modern, real-world, concurrent, and object-oriented workloads that exercise various concurrency primitives of the JVM. We show that the use of concurrency primitives in these workloads reveals optimization opportunities that were not visible with the existing workloads. We use Renaissance to compare performance of two state-of-the-art, production-quality JIT compilers (HotSpot C2 and Graal), and show that the performance differences are more significant than on existing suites such as DaCapo and SPECjvm2008. We also use Renaissance to expose four new compiler optimizations, and we analyze the behavior of several existing ones. We use Renaissance to compare performance of two state-of-the-art, production-quality JIT compilers (HotSpot C2 and Graal), and show that the performance differences are more significant than on existing suites such as DaCapo and SPECjvm2008. We also use Renaissance to expose four new compiler optimizations, and we analyze the behavior of several existing ones.},
 	urldate = {2024-06-17},
-	booktitle = {Proceedings of the 40th {ACM} {SIGPLAN} {Conference} on {Programming} {Language} {Design} and {Implementation}},
+	booktitle = {Proceedings of the 40th {ACM} {SIGPLAN} {Conference} on {Programming} {Language} {Design} and {Implementation} (PLDI)},
 	publisher = {Association for Computing Machinery},
 	author = {Prokopec, Aleksandar and Rosà, Andrea and Leopoldseder, David and Duboscq, Gilles and Tůma, Petr and Studener, Martin and Bulej, Lubomír and Zheng, Yudi and Villazón, Alex and Simon, Doug and Würthinger, Thomas and Binder, Walter},
 	month = jun,
@@ -739,21 +736,25 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 }
 
 @inproceedings{felber_hardware_2016,
-	address = {London United Kingdom},
-	title = {Hardware read-write lock elision},
-	isbn = {978-1-4503-4240-7},
-	url = {https://dl.acm.org/doi/10.1145/2901318.2901346},
-	doi = {10.1145/2901318.2901346},
-	abstract = {Hardware Lock Elision (HLE) represents a promising technique to enhance parallelism of concurrent applications relying on conventional, lock-based synchronization. The idea at the basis of current HLE approaches is to wrap critical sections into hardware transactions: this allows critical sections to be executed in parallel using a speculative approach, while leveraging on conﬂict detection capabilities provided by hardware transactions to ensure equivalent semantics to pessimistic lock-based synchronization.},
-	language = {en},
-	urldate = {2024-06-17},
-	booktitle = {Proceedings of the {Eleventh} {European} {Conference} on {Computer} {Systems}},
-	publisher = {ACM},
-	author = {Felber, Pascal and Issa, Shady and Matveev, Alexander and Romano, Paolo},
-	month = apr,
-	year = {2016},
-	pages = {1--15},
-	file = {Felber et al. - 2016 - Hardware read-write lock elision.pdf:/home/pandey/Nextcloud/zotero/storage/CYUMNCWE/Felber et al. - 2016 - Hardware read-write lock elision.pdf:application/pdf},
+  author       = {Pascal Felber and
+                  Shady Issa and
+                  Alexander Matveev and
+                  Paolo Romano},
+  editor       = {Cristian Cadar and
+                  Peter R. Pietzuch and
+                  Kimberly Keeton and
+                  Rodrigo Rodrigues},
+  title        = {Hardware read-write lock elision},
+  booktitle    = {Proceedings of the Eleventh European Conference on Computer Systems,
+                  EuroSys 2016, London, United Kingdom, April 18-21, 2016},
+  pages        = {34:1--34:15},
+  publisher    = {{ACM}},
+  year         = {2016},
+  url          = {https://doi.org/10.1145/2901318.2901346},
+  doi          = {10.1145/2901318.2901346},
+  timestamp    = {Thu, 12 Nov 2020 16:34:18 +0100},
+  biburl       = {https://dblp.org/rec/conf/eurosys/FelberIMR16.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
 @article{carvalho_optimizing_2016,
@@ -780,7 +781,6 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 	shorttitle = {On {Scheduling} in {Distributed} {Transactional} {Memory}},
 	url = {https://doi.org/10.1007/978-1-4939-2092-1_44},
 	abstract = {Data centers have been increasingly employed in distributed services to support a vast of amount of consumer requests. The requests range from web services to gaming for computation intensive applications. In order to process these requests, the data centers exploit in-memory data for high performance and ensure transactional properties for concurrent requests such as atomicity, consistency, and isolation. Traditionally lock-based synchronization has been used for the consistency of data, but is inherently error-prone. For example, coarse-grained locking, in which a large data structure is protected using a single lock is simple and easy to use, but permits little concurrency. In contrast, with fine-grained locking, in which each component of a data structure (e.g., a hash table bucket) is protected by a lock, programmers must acquire only necessary and sufficient locks to obtain maximum concurrency without compromising safety, and must avoid deadlocks when acquiring multiple locks. Both these situations are highly prone to programmer errors.},
-	language = {en},
 	urldate = {2024-06-17},
 	booktitle = {Handbook on {Data} {Centers}},
 	publisher = {Springer},
@@ -809,41 +809,53 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 }
 
 @inproceedings{rito_props_2014,
-	address = {Cham},
-	title = {{ProPS}: {A} {Progressively} {Pessimistic} {Scheduler} for {Software} {Transactional} {Memory}},
-	isbn = {978-3-319-09873-9},
-	shorttitle = {{ProPS}},
-	doi = {10.1007/978-3-319-09873-9_13},
-	abstract = {Software Transactional Memory (STM) is one promising abstraction to simplify the task of writing highly parallel applications. Nonetheless, in workloads lacking enough parallelism, STM’s optimistic approach to concurrency control can adversely degrade performance as transactions abort and restart often.},
-	language = {en},
-	booktitle = {Euro-{Par} 2014 {Parallel} {Processing}},
-	publisher = {Springer International Publishing},
-	author = {Rito, Hugo and Cachopo, João},
-	editor = {Silva, Fernando and Dutra, Inês and Santos Costa, Vítor},
-	year = {2014},
-	keywords = {Software Transactional Memory, Performance, Transaction Conflict, Transaction Scheduling},
-	pages = {150--161},
-	file = {Full Text PDF:/home/pandey/Nextcloud/zotero/storage/YDR7JAEE/Rito and Cachopo - 2014 - ProPS A Progressively Pessimistic Scheduler for S.pdf:application/pdf},
+  author       = {Hugo Rito and
+                  Jo{\~{a}}o P. Cachopo},
+  editor       = {Fernando M. A. Silva and
+                  In{\^{e}}s de Castro Dutra and
+                  V{\'{\i}}tor Santos Costa},
+  title        = {ProPS: {A} Progressively Pessimistic Scheduler for Software Transactional
+                  Memory},
+  booktitle    = {Euro-Par 2014 Parallel Processing - 20th International Conference,
+                  Porto, Portugal, August 25-29, 2014. Proceedings},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {8632},
+  pages        = {150--161},
+  publisher    = {Springer},
+  year         = {2014},
+  url          = {https://doi.org/10.1007/978-3-319-09873-9\_13},
+  doi          = {10.1007/978-3-319-09873-9\_13},
+  timestamp    = {Sat, 19 Oct 2019 20:26:17 +0200},
+  biburl       = {https://dblp.org/rec/conf/europar/RitoC14.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
 
 @inproceedings{FlexiGran2024,
-  title     = {FlexiGran: Flexible Granularity Locking in Hierarchies},
-  author    = {Anju Mongandampulath Akathoott and Rupesh Nasre},
-  booktitle = {Proceedings of the Euro-Par 2024 Conference},
-  year      = {2024},
-  location  = {Madrid, Spain},
-  pages     = {0--0},
-  publisher = {Springer LNCS},
-  address   = {IIT Madras, India}
+  author="Mongandampulath Akathoott, Anju
+  and Nasre, Rupesh",
+  editor="Carretero, Jesus
+  and Shende, Sameer
+  and Garcia-Blas, Javier
+  and Brandic, Ivona
+  and Olcoz, Katzalin
+  and Schreiber, Martin",
+  title="FlexiGran: Flexible Granularity Locking in Hierarchies",
+  booktitle="Euro-Par 2024: Parallel Processing",
+  year="2024",
+  publisher="Springer Nature Switzerland",
+  address="Cham",
+  pages="3--17",
+  abstract="Locking continues to be a primary technique used to achieve thread synchronization. Especially in the case of rooted hierarchies, semantic locking can be achieved with physical locks at various granularity levels. Such a multi-granularity locking (MGL) provides interesting trade-off between the locking cost and the size of the locked sub-hierarchy. At one extreme, fine-grained locking precisely locks the nodes of interest, but incurs a high locking cost. In contrast, a coarse-grained lock may lock the root of the hierarchy minimizing the locking cost, but locking many more nodes than required. Existing approaches to MGL (i) do not work well with non-tree hierarchies such as DAGs, (ii) disallow structural updates to the hierarchy, (iii) do not support the co-existence of fine-grained and coarse-grained locks, or (iv) are rigid towards their underlying memory usage. In this work, we propose a versatile technique named FlexiGran, which does not have any of these issues. It allows co-existence of hierarchical and fine-grained locks in an arbitrarily shaped hierarchy which can undergo structural alterations at run time, while allowing a user to control its memory usage by adding optional approximations. We illustrate the effectiveness of FlexiGran using STMBench7, and compare it empirically with two recent locking techniques, DomLock and HiFi. On a static hierarchy with more than 1 million nodes, FlexiGran shows an improvement in throughput of around 159{\%} and 374{\%} on an average, compared to HiFi and DomLock respectively.",
+  isbn="978-3-031-69577-3"
 }
+
 
 @inproceedings{KalikarN18,
   author       = {Saurabh Kalikar and
                   Rupesh Nasre},
   title        = {NumLock: Towards Optimal Multi-Granularity Locking in Hierarchies},
-  booktitle    = {Proceedings of the 47th International Conference on Parallel Processing,
-                  {ICPP} 2018, Eugene, OR, USA, August 13-16, 2018},
+  booktitle    = {Proceedings of the 47th International Conference on Parallel Processing (ICPP), Eugene, OR, USA, August 13-16, 2018},
   pages        = {75:1--75:10},
   publisher    = {{ACM}},
   year         = {2018},
@@ -863,7 +875,7 @@ keywords = {transaction, lock, database, consistency, concurrancy}
                   Massimo Torquati},
   title        = {Multi-granularity Locking in Hierarchies with Synergistic Hierarchical
                   and Fine-Grained Locks},
-  booktitle    = {Euro-Par 2018: Parallel Processing - 24th International Conference
+  booktitle    = {Euro-Par 2018: Parallel Processing: 24th International Conference
                   on Parallel and Distributed Computing, Turin, Italy, August 27-31,
                   2018, Proceedings},
   series       = {Lecture Notes in Computer Science},
@@ -878,10 +890,9 @@ keywords = {transaction, lock, database, consistency, concurrancy}
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
-
 @book{DBLP:books/daglib/0030596,
   author       = {Michel Raynal},
-  title        = {Concurrent Programming - Algorithms, Principles, and Foundations},
+  title        = {Concurrent Programming: Algorithms, Principles, and Foundations},
   publisher    = {Springer},
   year         = {2013},
   url          = {https://doi.org/10.1007/978-3-642-32027-9},
@@ -905,7 +916,7 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 
   @book{DBLP:books/daglib/0006734,
   author       = {C. J. Date},
-  title        = {An introduction to database systems {(7.} ed.)},
+  title        = {An introduction to database systems (7 ed.)},
   publisher    = {Addison-Wesley-Longman},
   year         = {2000},
   isbn         = {978-0-201-68419-3},
@@ -929,7 +940,7 @@ keywords = {transaction, lock, database, consistency, concurrancy}
 
 @book{DBLP:books/daglib/0027893,
   author       = {Lars George},
-  title        = {HBase - The Definitive Guide: Random Access to Your Planet-Size Data},
+  title        = {HBase: The Definitive Guide: Random Access to Your Planet-Size Data},
   publisher    = {O'Reilly},
   year         = {2011},
   url          = {http://www.oreilly.de/catalog/9781449396107/index.html},
@@ -939,20 +950,6 @@ keywords = {transaction, lock, database, consistency, concurrancy}
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
-@article{BayerS77,
-  author       = {Rudolf Bayer and
-                  Mario Schkolnick},
-  title        = {Concurrency of Operations on B-Trees},
-  journal      = {Acta Informatica},
-  volume       = {9},
-  pages        = {1--21},
-  year         = {1977},
-  url          = {https://doi.org/10.1007/BF00263762},
-  doi          = {10.1007/BF00263762},
-  timestamp    = {Sun, 21 Jun 2020 17:37:58 +0200},
-  biburl       = {https://dblp.org/rec/journals/acta/BayerS77.bib},
-  bibsource    = {dblp computer science bibliography, https://dblp.org}
-}
 
 @article{LeisH019,
   author       = {Viktor Leis and
@@ -988,3 +985,137 @@ keywords = {transaction, lock, database, consistency, concurrancy}
   bibsource    = {dblp computer science bibliography, https://dblp.org}
 }
 
+@book{DBLP:books/daglib/0020056,
+  author       = {Maurice Herlihy and
+                  Nir Shavit},
+  title        = {The art of multiprocessor programming},
+  publisher    = {Morgan Kaufmann},
+  year         = {2008},
+  isbn         = {978-0-12-370591-4},
+  timestamp    = {Thu, 10 Feb 2011 14:09:19 +0100},
+  biburl       = {https://dblp.org/rec/books/daglib/0020056.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+
+@article{DBLP:journals/acta/BayerS77,
+  author       = {Rudolf Bayer and
+                  Mario Schkolnick},
+  title        = {Concurrency of Operations on B-Trees},
+  journal      = {Acta Informatica},
+  volume       = {9},
+  pages        = {1--21},
+  year         = {1977},
+  url          = {https://doi.org/10.1007/BF00263762},
+  doi          = {10.1007/BF00263762},
+  timestamp    = {Sun, 21 Jun 2020 17:37:58 +0200},
+  biburl       = {https://dblp.org/rec/journals/acta/BayerS77.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+
+@article{DBLP:journals/jd/Sweeney83,
+  author       = {Russell Sweeney},
+  title        = {The Development of the Dewey Decimal Classification},
+  journal      = {J. Documentation},
+  volume       = {39},
+  number       = {3},
+  pages        = {192--205},
+  year         = {1983},
+  url          = {https://doi.org/10.1108/eb026748},
+  doi          = {10.1108/EB026748},
+  timestamp    = {Sun, 06 Sep 2020 16:55:45 +0200},
+  biburl       = {https://dblp.org/rec/journals/jd/Sweeney83.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{DBLP:journals/pvldb/FinisBK0MF15,
+  author       = {Jan Finis and
+                  Robert Brunel and
+                  Alfons Kemper and
+                  Thomas Neumann and
+                  Norman May and
+                  Franz F{\"{a}}rber},
+  title        = {Indexing Highly Dynamic Hierarchical Data},
+  journal      = {Proc. {VLDB} Endow.},
+  volume       = {8},
+  number       = {10},
+  pages        = {986--997},
+  year         = {2015},
+  url          = {http://www.vldb.org/pvldb/vol8/p986-finis.pdf},
+  doi          = {10.14778/2794367.2794369},
+  timestamp    = {Sat, 25 Apr 2020 13:58:37 +0200},
+  biburl       = {https://dblp.org/rec/journals/pvldb/FinisBK0MF15.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+@inproceedings{DBLP:conf/cloud/VavilapalliMDAKEGLSSSCORRB13,
+  author       = {Vinod Kumar Vavilapalli and
+                  Arun C. Murthy and
+                  Chris Douglas and
+                  Sharad Agarwal and
+                  Mahadev Konar and
+                  Robert Evans and
+                  Thomas Graves and
+                  Jason Lowe and
+                  Hitesh Shah and
+                  Siddharth Seth and
+                  Bikas Saha and
+                  Carlo Curino and
+                  Owen O'Malley and
+                  Sanjay Radia and
+                  Benjamin C. Reed and
+                  Eric Baldeschwieler},
+  editor       = {Guy M. Lohman},
+  title        = {Apache Hadoop {YARN:} yet another resource negotiator},
+  booktitle    = {{ACM} Symposium on Cloud Computing, {SOCC} '13, Santa Clara, CA, USA,
+                  October 1-3, 2013},
+  pages        = {5:1--5:16},
+  publisher    = {{ACM}},
+  year         = {2013},
+  url          = {https://doi.org/10.1145/2523616.2523633},
+  doi          = {10.1145/2523616.2523633},
+  timestamp    = {Sat, 25 Feb 2023 23:39:37 +0100},
+  biburl       = {https://dblp.org/rec/conf/cloud/VavilapalliMDAKEGLSSSCORRB13.bib},
+  bibsource    = {dblp computer science bibliography, https://dblp.org}
+}
+
+
+@book{10.5555/2663429,
+author = {Wyatt, Derek},
+title = {Akka Concurrency},
+year = {2013},
+isbn = {0981531660},
+publisher = {Artima Incorporation},
+address = {Sunnyvale, CA, USA},
+abstract = {Writing truly concurrent software on the Java Virtual Machine just got a whole lot easier. The Akka Toolkit takes the sting out of coding for multiple cores, multiple processors, and even multiple machines. Akka Concurrency will show you what it means to design and write software in the paradigm of Akka. You'll learn how to think about your software in new and exciting ways that will allow you to express your designs naturally, allowing you to focus on the business of your software more than on the concurrency of it. This book picks up where the Akka documentation leaves off, exploring the how and the why of Akka, in a way that will empower you to grow your applications to new levels of scalability, responsiveness, and performance.}
+}
+
+
+@inproceedings{10.1145/2038916.2038932,
+author = {Bykov, Sergey and Geller, Alan and Kliot, Gabriel and Larus, James R. and Pandya, Ravi and Thelin, Jorgen},
+title = {Orleans: cloud computing for everyone},
+year = {2011},
+isbn = {9781450309769},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2038916.2038932},
+doi = {10.1145/2038916.2038932},
+abstract = {Cloud computing is a new computing paradigm, combining diverse client devices -- PCs, smartphones, sensors, single-function, and embedded -- with computation and data storage in the cloud. As with every advance in computing, programming is a fundamental challenge, as the cloud is a concurrent, distributed system running on unreliable hardware and networks.Orleans is a software framework for building reliable, scalable, and elastic cloud applications. Its programming model encourages the use of simple concurrency patterns that are easy to understand and employ correctly. It is based on distributed actor-like components called grains, which are isolated units of state and computation that communicate through asynchronous messages. Within a grain, promises are the mechanism for managing both asynchronous messages and local task-based concurrency. Isolated state and a constrained execution model allow Orleans to persist, migrate, replicate, and reconcile grain state. In addition, Orleans provides lightweight transactions that support a consistent view of state and provide a foundation for automatic error handling and failure recovery.We implemented several applications in Orleans, varying from a messaging-intensive social networking application to a data- and compute-intensive linear algebra computation. The programming model is a general one, as Orleans allows the communications to evolve dynamically at runtime. Orleans enables a developer to concentrate on application logic, while the Orleans runtime provides scalability, availability, and reliability.},
+booktitle = {Proceedings of the 2nd ACM Symposium on Cloud Computing},
+articleno = {16},
+numpages = {14},
+keywords = {cloud computing, distributed actors, programming models},
+location = {Cascais, Portugal},
+series = {SOCC '11}
+}
+
+
+@article{armstrong1991erlang,
+  title={Erlang User’s Guide and Reference Manual Version 3.2},
+  author={Armstrong, Joe L and Virding, RH and Williams, Mike C},
+  journal={Ellemtel Utvecklings AB, Sweden},
+  year={1991}
+}
