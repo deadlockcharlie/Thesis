@@ -7,6 +7,7 @@
 
 Concurrency control is a crucial component in systems where multiple processes or threads simultaneously access shared resources, such as data structures, database tables, and system resources. Effective concurrency control mechanisms employ various synchronization techniques to maintain the safety and consistency of these shared resources. As noted by \citet{DBLP:books/daglib/0030596}, "Synchronization is a set of rules and mechanisms that allows the specification and implementation of sequencing properties on statements issued by the processes so that all the executions of a multiprocess program are correct."
 
+\todo{Update this paragraph}
 In this chapter, we provide an overview of concurrency control mechanisms, focusing on locking. We introduce a few classical locking mechanisms, their role in synchronization and in ensuring data consistency. We discuss additional challenges brought forth by hierarchical data structures and the need for specialized locking techniques to manage concurrent access to them. Finally, we introduce the concept of multi-granularity locking and its role in balancing the trade-offs between the extremes of locking in hierarchical data structures.
 
 
@@ -17,7 +18,6 @@ Hierarchical data models, which have their roots in the early days of computer s
 Over the decades, hierarchical data structures have remained pertinent, particularly in domains that require nested or tree-like relationships. They are widely utilized in XML data management, file system hierarchies, and organizational charts \cite{DBLP:books/mk/BunemanSA99}. The relevance of hierarchical models has only increased in contemporary big-data contexts, where they are often integrated with other data models, such as graphs, to address the challenges posed by the complexity and interconnectedness of modern data environments.
 
 For instance, hierarchical data models are fundamental in NoSQL databases like Apache HBase, where the efficient storage and rapid retrieval of large-scale, semi-structured data are critical \cite{DBLP:books/daglib/0027893}. The structured nature of hierarchical models aligns well with applications in social networks, content management systems, and cloud-based storage solutions, where understanding and managing data relationships is essential.
-
 Consequently, hierarchical data models remain foundational to modern computing, providing an effective framework for organizing and retrieving complex, nested information.
 
 \subsection{Structure of a Hierarchy}
@@ -52,12 +52,10 @@ Hierarchical data structures support a variety of operations that enable the tra
 \end{itemize}
 
 
-\section{Need for synchronization in Hierarchical Data Structures}
+\section{Need for synchronization in Hierarchical Data Structures} \label{sec:multicoresystemsandconcurrencycontrol}
+Locking mechanisms in hierarchical data structures are essential for ensuring data consistency and integrity in concurrent environments where multiple processes or threads may attempt to access or modify data simultaneously. Given the inherently nested and interdependent relationships among vertices in hierarchical structures, specialized locking techniques are often required to effectively manage concurrent access.
 
-Hierarchical data structures are commonly used in applications where multiple threads or processes concurrently access and modify the data. 
-
-
-\section{Multithreaded systems and concurrency control} \label{sec:multicoresystemsandconcurrencycontrol}
+The primary objective of locking in these structures is to prevent race conditions, which occur when two or more operations interfere with one another, potentially resulting in an inconsistent or incorrect data state. By implementing appropriate locking strategies, it is possible to coordinate access to shared resources, thus safeguarding the integrity of the data and maintaining the correctness of operations performed within the hierarchy.
 
 This work on locking focuses on a multicore system where threads concurrently access a shared graph. Such use-cases provide the possibility to use a single centralized scheduler which decides on the ordering of the lock requests. In distributed deployments like HPC clusters where the communication can be guaranteed to be quasi-instantaneous, locking can still be useful since synchronization primitives can be implemented without worrying about catastrophic network partitions. Geo-distributed graphs and synchronization are out of the scope of this work. As such, locking in any form is not an efficient solution for use-cases where the graph is geo-distributed and the communication latency (ergo the synchronization delay) is high. 
 
@@ -225,9 +223,9 @@ Another useful technique is the implementation of timeout mechanisms. By allowin
 % Locking is a fundamental technique in concurrency control that helps ensure the integrity and consistency of shared data structures in multi-threaded environments. By understanding and correctly implementing locking mechanisms, you can prevent race conditions, maintain data consistency, and improve the overall reliability of your concurrent programs.
 
 \section{Locking in Hierarchical Data Structures}
-Locking mechanisms in hierarchical data structures are essential for ensuring data consistency and integrity in concurrent environments where multiple processes or threads may attempt to access or modify data simultaneously. Given the inherently nested and interdependent relationships among vertices in hierarchical structures, specialized locking techniques are often required to effectively manage concurrent access.
+Before delving into the detailed discussion of locking and its relevance to hierarchical data, it is essential to establish the foundational terminology that will be used throughout this thesis. Hierarchical locking, as a mechanism for managing concurrent access to data structured in a hierarchy, involves a variety of concepts that require precise definitions to avoid ambiguity and ensure clarity.
 
-The primary objective of locking in these structures is to prevent race conditions, which occur when two or more operations interfere with one another, potentially resulting in an inconsistent or incorrect data state. By implementing appropriate locking strategies, it is possible to coordinate access to shared resources, thus safeguarding the integrity of the data and maintaining the correctness of operations performed within the hierarchy.
+In particular, concepts like "lock grain," which describe levels of granularity in hierarchical locking, are critical for understanding the nuances of how concurrency is managed in hierarchical and graph-based data models. While some of these terms are standard in the literature, others are specific to the context of this thesis, reflecting the unique challenges and solutions presented by hierarchical data structures.
 
 \subsection{Key terms in hierarchical locking}
 
