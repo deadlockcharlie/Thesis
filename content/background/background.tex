@@ -7,7 +7,6 @@
 
 Concurrency control is a crucial component in systems where multiple processes or threads simultaneously access shared resources, such as data structures, database tables, and system resources. Effective concurrency control mechanisms employ various synchronization techniques to maintain the safety and consistency of these shared resources. As noted by \citet{DBLP:books/daglib/0030596}, "Synchronization is a set of rules and mechanisms that allows the specification and implementation of sequencing properties on statements issued by the processes so that all the executions of a multiprocess program are correct."
 
-\todo{Update this paragraph}
 In this chapter, we provide an overview of concurrency control mechanisms, focusing on locking. We introduce a few classical locking mechanisms, their role in synchronization and in ensuring data consistency. We discuss additional challenges brought forth by hierarchical data structures and the need for specialized locking techniques to manage concurrent access to them. Finally, we introduce the concept of multi-granularity locking and its role in balancing the trade-offs between the extremes of locking in hierarchical data structures.
 
 
@@ -52,7 +51,7 @@ Hierarchical data structures support a variety of operations that enable the tra
 \end{itemize}
 
 
-\section{Need for synchronization in Hierarchical Data Structures} \label{sec:multicoresystemsandconcurrencycontrol}
+\section{Need for Concurrency Control in Hierarchical Data Structures} \label{sec:multicoresystemsandconcurrencycontrol}
 Locking mechanisms in hierarchical data structures are essential for ensuring data consistency and integrity in concurrent environments where multiple processes or threads may attempt to access or modify data simultaneously. Given the inherently nested and interdependent relationships among vertices in hierarchical structures, specialized locking techniques are often required to effectively manage concurrent access.
 
 The primary objective of locking in these structures is to prevent race conditions, which occur when two or more operations interfere with one another, potentially resulting in an inconsistent or incorrect data state. By implementing appropriate locking strategies, it is possible to coordinate access to shared resources, thus safeguarding the integrity of the data and maintaining the correctness of operations performed within the hierarchy.
@@ -126,6 +125,22 @@ Several techniques can be employed to mitigate the risk of deadlocks in systems 
 
 Another useful technique is the implementation of timeout mechanisms. By allowing threads to specify a maximum waiting period for acquiring locks, the system can reduce the likelihood of indefinite waiting. If a thread cannot acquire the desired lock within the specified time-frame, it can abandon its attempt and either retry later or perform alternative actions. This not only aids in breaking potential deadlocks but also enhances overall system responsiveness, as it prevents threads from being indefinitely stalled.
 
+
+
+\section{Requirements} \label{sec:requirements}
+
+The design of a locking mechanism for hierarchical data structures must satisfy several key requirements to ensure the correctness, efficiency, and scalability of the system. These requirements are essential for guiding the development and evaluation of the locking algorithm. 
+They can be categorized into four main areas of concern:
+
+\begin{itemize}
+    \item[\Ra] \emph{Identifying a lock guard for every vertex of a hierarchy}. For a given lock target, the lock protocol must effectively and efficiently identify the appropriate lock guard that protects this target. This is essential to ensure that the lock granularity can be minimized while maintaining data consistency. If a protocol fails to identify an appropriate guard, it may lead to unnecessary contention and reduced concurrency.
+
+    \item[\Rb] \emph{Finding an appropriate lock guard for a request}. When a thread requests a lock on a set of lock targets, the locking protocol must determine an appropriate lock guard for this request that maximizes concurrency and minimizes contention with other lock requests. This involves considering the topology of the hierarchy and the relationships between vertices to minimize conflicts where two threads request locks on overlapping grains.
+    
+    \item[\Rc] \emph{Efficiently detecting conflicts between locks.} Since a correct locking protocol is workload agnostic, it must allow a thread to efficiently detect conflicts with other lock requests. In MGL, this involves testing the ancestor-descendant relationships between two lock guards which in turn implies grain overlap. If a thread requests a lock on a vertex, then to prevent conflicts, a locking protocol must ensure that no ancestor or descendant of this vertex is locked by another thread in a conflicting mode. 
+    
+    \item[\Rd] \emph{Housekeeping the metadata required to implement the locking protocol.} The additional metadata required to implement the locking protocol and the conflict detection mechanism must be managed efficiently to minimize the overhead of using that particular locking protocol. If the metadata management is prohibitively expensive for certain workloads, the locking protocol may not be practical for real-world applications that encounter those workloads. 
+\end{itemize}
 
 
 % \section{Concurrency control though general locking}
@@ -330,19 +345,4 @@ We discuss this in Chapter \ref{chap:relatedwork}.
 
 % \section{Related Work}
 % Survey of existing research on locking mechanisms and optimization techniques. Comparison of related approaches to the CALock algorithm.
-
-\section{Requirements} \label{sec:requirements}
-
-The design of a locking mechanism for hierarchical data structures must satisfy several key requirements to ensure the correctness, efficiency, and scalability of the system. These requirements are essential for guiding the development and evaluation of the locking algorithm. 
-These requirements can be categorized into four main areas of concern:
-
-\begin{itemize}
-    \item[\textbf{R1}] \emph{Identifying a lock guard for every vertex of a hierarchy}. For a given lock target, the lock protocol must effectively and efficiently identify the appropriate lock guard that protects this target. This is essential to ensure that the lock granularity can be minimized while maintaining data consistency. If a protocol fails to identify an appropriate guard, it may lead to unnecessary contention and reduced concurrency.
-
-    \item[\textbf{R2}] \emph{Finding an appropriate lock guard for a request}. When a thread requests a lock on a set of lock targets, the locking protocol must determine an appropriate lock guard for this request that maximizes concurrency and minimizes contention with other lock requests. This involves considering the topology of the hierarchy and the relationships between vertices to minimize conflicts where two threads request locks on overlapping grains.
-    
-    \item[\textbf{R3}] \emph{Detecting conflicts between locks.} Since a correct locking protocol is workload agnostic, it must allow a thread to efficiently detect conflicts with other lock requests. In MGL, this involves testing the ancestor-descendant relationships between two lock guards which in turn implies grain overlap. If a thread requests a lock on a vertex, then to prevent conflicts, a locking protocol must ensure that no ancestor or descendant of this vertex is locked by another thread in a conflicting mode. 
-    
-    \item[\textbf{R4}] \emph{Housekeeping the metadata required to implement the locking protocol.} The additional metadata required to implement the locking protocol and the conflict detection mechanism must be managed efficiently to minimize the overhead of using that particular locking protocol. If the metadata management is prohibitively expensive for certain workloads, the locking protocol may not be practical for real-world applications that encounter those workloads. 
-\end{itemize}
 

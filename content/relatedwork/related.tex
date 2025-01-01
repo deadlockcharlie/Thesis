@@ -40,7 +40,7 @@ For example, in Figure \ref{fig:level_locks}, in order to lock target vertex $D$
     \label{fig:level_locks}
 \end{figure}
 
-Level-based locks fulfil only requirement \textbf{R1} since the lock guard is fixed for a set of vertices. 
+Level-based locks fulfil only requirement \Ra since the lock guard is fixed for a set of vertices. 
 However, since the lock grain is fixed by level, acquiring a lock on a specific level implicitly locks all the vertices in that level. This leads to unnecessary conflicts between conflicts that access disjoint sets of vertices in the same level. 
 For example, consider two threads $T_1$ and $T_2$ that want to lock vertices $D$ and $E$ respectively.
 Since the lock guard for level 2 is the same, $T_1$ and $T_2$ will always conflict with each other even though they are accessing different vertices. 
@@ -55,12 +55,12 @@ Since the lock guard for level 2 is the same, $T_1$ and $T_2$ will always confli
 
 Intention locks are used to coordinate concurrent access by indicating a thread’s intention to acquire more fine-grain locks within a hierarchy. Unlike traditional locks that are placed directly on lock targets, intention locks are acquired at higher levels of a hierarchy to signal that a thread plans to acquire finer-grained locks on specific target vertices which exist deeper in the hierarchy. These intention locks protect the paths that lead to the target vertices from the root. By guarding these paths, intention locks ensure that the target vertices can be accesses exclusively by writers.
 
-Intention locking was one of the first approaches to hierarchical locking designed to efficiently meet requirements \textbf{R1} and \textbf{R3}. \citet{gray1975granularity} introduced three new lock modes: IS (Intention Shared), IX (Intention Exclusive), and SIX (Shared Intention Exclusive), which allow a thread to signify its intention to acquire a shared or exclusive lock on a descendant of a vertex locked under IS, IX, or SIX modes, respectively. In the intention lock protocol, a thread acquires these intention locks on all the paths from the root to the lock target, which is then locked in either a shared (S) or exclusive (X) mode. Thus, all the ancestors of a target vertex are locked in an intention mode, and the target vertex is locked in a shared or exclusive mode.
+Intention locking was one of the first approaches to hierarchical locking designed to efficiently meet requirements \Ra and \Rc. \citet{gray1975granularity} introduced three new lock modes: IX (Intention Exclusive), IS (Intention Shared) and SIX (Shared Intention Exclusive), which allow a thread to signify its intention to acquire an exclusive lock, a shared lock or a shared lock which can be upgraded to an exclusive lock on a descendant of a vertex locked under IX, IS or SIX modes, respectively. In the intention lock protocol, a thread acquires these intention locks on all the paths from the root to the lock target, which is then locked in either a shared (S) or exclusive (X) mode. Thus, all the ancestors of a target vertex are locked in an intention mode, and the target vertex is locked in a shared or exclusive mode.
 
 The protocol requires that threads place these locks in a depth-first manner. This ordering ensures that two concurrent threads trying to lock the same target will always acquire the locks in the same order, allowing them to detect conflicts deterministically. Table \ref{tab:intention_locks} shows the compatibility matrix for the intention locks.
 
 
-% Intention locking is one of the first approaches to hierarchical locking that attempts to address the requirements \textbf{R1} and \textbf{R3} with efficiency.
+% Intention locking is one of the first approaches to hierarchical locking that attempts to address the requirements \Ra and \Rc with efficiency.
 % \citet{gray1975granularity} introduce three new lock modes: IS (Intention Shared), IX (Intention Exclusive) and SIX (Shared Intention Exclusive) which signify the intention of a thread to acquire a shared or exclusive lock on a descendant of a vertex locked under IS, IX or SIX modes respectively.
 % Intention lock protocol works by acquiring the aforementioned intention locks on the paths from the root to the lock target. The lock target is then locked in a shared (S) or exclusive (X) mode. These locks are always placed in a top-down, depth first manner. Owing to this, two concurrent threads, trying to lock the same lock target will always acquire the locks in the same order and detect a conflict. Table \ref{tab:intention_locks} shows the compatibility matrix for the intention locks.
 
@@ -114,12 +114,12 @@ In the example of Figure \ref{fig:intention_lock_example}, $T_1$ must perform th
     \item $A \rightarrow C \rightarrow D$
 \end{itemize}
 
-In a tree, every vertex is reachable from the root via a unique path. 
+In a rooted tree, every vertex is reachable from the root via a unique path. 
 This, however, is not the case with DAGs.
 In DAGs, as the number of paths from the root to a target vertex increases, the number of traversals required to acquire an S or X lock on that vertex also increases because intention locks are to be acquired on all paths to the target vertex.
 This leads to a significant performance degradation. Along with the added performance penalty, the order in which multiple paths are traversed needs to be deterministic to prevent deadlocks.  
 
-So, while intention locks fulfil requirements \textbf{R1} and \textbf{R2}, requirement \textbf{R3} incurs a significant performance penalty. 
+So, while intention locks fulfil requirements \Ra and \Rb, requirement \Rc incurs a significant performance penalty. 
 
 \subsection{DomLock}
 DomLock \cite{kalikar2016domlock} is a MGL technique that uses the concept of dominators to identify lock grains instead of relying on explicitly locking paths that lead to a target. A dominator is a vertex that lies on all the paths from the root to a target vertex $v$ and is thus an effective lock guard for its descendants since locking a dominator is sufficient to lock all the paths to $v$ and the descendants of $v$. 
@@ -184,7 +184,7 @@ Sometimes, due to a false subsumption disjoint subgraphs are locked together.
 This leads to spurious lock conflicts and consequently, performance degradation. 
 
 \paragraph{Label recomputation}
-Another drawback of DomLock is that it does not support dynamic hierarchies. 
+Another drawback of DomLock is that it does not support dynamic hierarchies without having to relabel a large part of the hierarchy.
 Since intervals are used to identify lock grains and determine the ancestor-descendant relationship, the intervals of the vertices have to be recomputed when a structural modification occurs.
 % The intervals of the vertices are computed once via a post-order traversal. When a vertex is added or removed from the hierarchy, this computation has to be redone. 
 
@@ -203,7 +203,7 @@ This is done in order to prevent incorrect dominator identification due to impro
 In order to prevent concurrent reads from interfering with the recomputation, a mutex has to be placed on the root of the hierarchy. This lock is held until the recomputation is complete. 
 In dynamic hierarchies, structural modifications can lead to a significant performance penalty due to the lack of parallelism in the relabelling. 
 
-While DomLock addresses requirements $R1$ and $R2$, false subsumptions and the lack of support for dynamic hierarchies incur significant penalties against requirement $R3$ and $R4$ respectively.
+While DomLock addresses requirements \Ra and \Rb, false subsumptions and the lack of support for dynamic hierarchies incur significant penalties against requirement \Rc and \Rd respectively.
 
 
 
@@ -274,7 +274,7 @@ MID encounters double the penalty for recomputing vertex labels in dynamic hiera
 
 For example, when a vertex $K$ is inserted as a child of $G$ as shown in Figure \ref{fig:MID_example_SM}, At least one interval for every vertex is recomputed. These intervals are then propagated to the root of the hierarchy. In order to prevent concurrent reads from interfering with the recomputation, a mutex is acquired on the root of the hierarchy. This lock is held until the recomputation is complete.
 
-MID tries to eliminate false subsumptions present in DomLock but does not do so successfully. The performance penalty for recomputation in dynamic hierarchies is doubled in MID as compared to DomLock. As such, MID fulfills requirements $R1$ and $R2$ but incurs even severe penalties against requirements $R3$ and $R4$ than DomLock.
+MID tries to eliminate false subsumptions present in DomLock but does not do so successfully. The performance penalty for recomputation in dynamic hierarchies is doubled in MID as compared to DomLock. As such, MID fulfills requirements \Ra and \Rb but incurs even severe penalties against requirements \Rc and \Rd than DomLock.
 
 \subsection{Flexible granularity Locking (FlexiGran)}
 
@@ -302,9 +302,9 @@ If a thread requests a fine-grain lock, then a reader/writer lock is directly re
 
 Since both fine-grain and MGL locks can exist in flexigran, the process of testing lock conflicts involves multiple steps. 
 
-Table \ref{tab:flexigran_locks} shows the compatibility matrix for FlexiGran locks. When checking if two MGL are compatible, the intervals of their guards are tested for overlap. Disjoint intervals indicate that the two locks are DomLock compatible.
+Table \ref{tab:flexigran_locks} shows the compatibility matrix for FlexiGran locks. \textbf{F} and \textbf{H} indicate the kind of lock acquired, fine-grain lock and multi-granularity lock respectively. \textbf{R} and \textbf{W} indicate the lock mode. So, \textbf{FR} is a fine-grain read lock.
 
-When checking two fine-grain locks for conflict, the lock guards for the lock requests are compared. If two fine-grain lock requests are on the same vertex, then they are in conflict if at-least one of the lock requests is for a write lock.
+When checking if two MGL are compatible, the intervals of their guards are tested for overlap. Disjoint intervals indicate that the two locks are DomLock compatible. When checking two fine-grain locks for conflict, the lock guards for the lock requests are compared. If two fine-grain lock requests are on the same vertex, then they are in conflict if at-least one of the lock requests is for a write lock.
 
 
 \begin{table}[h]
@@ -330,7 +330,7 @@ For example, in Figure \ref{fig:flexigran_example_locked}, a hierarchical lock i
 \paragraph{Label recomputation}
 Like DomLock, structural modifications in FlexiGran require recomputation of the intervals of the vertices. A single post-order traversal is enough to recompute the intervals and depths of vertices. Since the root might be involved in the structural modification, a lock is placed on the root to prevent concurrent reads from interfering with the recomputation. This restricts concurrency and leads to a degradation in performance. 
 
-As such, FlexiGran fulfills requirements $R1$ and $R2$ and incurs a significant performance penalty against requirement $R3$ due to the expensive compatibility checks required to detect conflicts between MGL and fine-grain locks. FlexiGran also incurs a performance penalty against requirement $R4$ due to the non-parallel recomputation of intervals in dynamic hierarchies.
+As such, FlexiGran fulfills requirements \Ra and \Rb and incurs a significant performance penalty against requirement \Rc due to the expensive compatibility checks required to detect conflicts between MGL and fine-grain locks. FlexiGran also incurs a performance penalty against requirement \Rd due to the non-parallel recomputation of intervals in dynamic hierarchies.
 
 
 
@@ -338,10 +338,10 @@ As such, FlexiGran fulfills requirements $R1$ and $R2$ and incurs a significant 
 
 Recall the four primary requirements identified for MGL:
 \begin{itemize}
-    \item[\textbf{R1}] Identifying a lock guard for every vertex of a hierarchy.
-    \item[\textbf{R2}] Finding an appropriate, optimal lock guard for a request.
-    \item[\textbf{R3}] Detecting conflicts between locks
-    \item[\textbf{R4}] Housekeeping the metadata required to implement the locking protocol.
+    \item[\Ra] Identifying a lock guard for every vertex of a hierarchy.
+    \item[\Rb] Finding an appropriate, optimal lock guard for a request.
+    \item[\Rc] Efficiently Detecting conflicts between locks
+    \item[\Rd] Housekeeping the metadata required to implement the locking protocol.
 \end{itemize}
 
 \begin{figure}[h]
@@ -352,12 +352,32 @@ Recall the four primary requirements identified for MGL:
     \label{fig:tradeoffs}
 \end{figure}
 
-Level-based locks are inefficient and only fulfil requirement \textbf{R1}. MGL based on traversals like Intention Lock, fulfills requirements \textbf{R1} and \textbf{R2} but incurs a significant performance penalty against requirement \textbf{R3} due to the sheer number of traversals required to lock a vertex.
 
-Label-based techniques like DomLock, MID and FlexiGran also fulfil requirements \textbf{R1} and \textbf{R2} but incur a performance penalty against requirement \textbf{R3} due to false subsumptions. In addition, due to the metadata required to implement the locking protocol, these techniques incur a performance penalty against requirement \textbf{R4} as well when used in dynamic hierarchies. 
+Level-based locks are inefficient and only fulfil requirement \Ra. MGL based on traversals like Intention Lock, fulfills requirements \Ra and \Rb but incurs a significant performance penalty against requirement \Rc due to the sheer number of traversals required to lock a vertex.
+
+\begin{table}[h]
+    \centering
+    \captionsetup{justification=centering}
+    \begin{tabular}{l | cccc}
+        \textbf{Algorithm} & \Ra & \Rb & \Rc & \Rd \\
+        \hline
+        Level-based locks & \cellcolor{green!25} Y & \cellcolor{red!25} N & \cellcolor{red!25} N & \cellcolor{red!25} N \\
+        Intention Lock & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{red!25} N & \cellcolor{red!25} N \\
+        DomLock & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{red!25} N & \cellcolor{red!25} N \\
+        MID & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{red!25} N & \cellcolor{red!25} N \\
+        FlexiGran & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{red!25} N & \cellcolor{red!25} N \\
+        CALock & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{green!25} Y \\
+        
+    \end{tabular}
+    \caption{Comparison of MGL techniques against requirements}
+    \label{tab:tradeoffs}
+\end{table}
+
+Label-based techniques like DomLock, MID and FlexiGran also fulfil requirements \Ra and \Rb but incur a performance penalty against requirement \Rc due to false subsumptions. In addition, due to the metadata required to implement the locking protocol, these techniques incur a performance penalty against requirement \Rd as well when used in dynamic hierarchies. 
 FlexiGran that implements MGL and fine-grain locks suffers from poor performance due to the expensive compatibility checks and label recomputation. 
 
-Figure \ref{fig:tradeoffs} shows the trade-offs in the different MGL techniques. Intention locks offer the most optimal lock grains at the cost of lock conflict detection efficiency. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to an optimal MGL protocol.
+Figure \ref{fig:tradeoffs} and Table \ref{tab:tradeoffs} shows the trade-offs in the different MGL techniques. Intention locks offer the most optimal lock grains at the cost of lock conflict detection efficiency. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to an optimal MGL protocol.
+
 
 
 \section{Improving efficiency of MGL techniques}
