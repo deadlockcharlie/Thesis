@@ -6,13 +6,36 @@
 \adjustmtc
 
 
-In database systems, maintaining data consistency and integrity during concurrent access is a foundational challenge. As systems grow in scale and complexity, managing data concurrency effectively becomes critical, especially in scenarios where multiple transactions access shared data simultaneously. Locking mechanisms provide a structured approach to concurrency control, with multi-granularity locking (MGL) being a particularly valuable technique. MGL has been widely studied in traditional database settings, especially for table spaces organized in tree-structured data, where it efficiently manages hierarchical access patterns.
+In databases, managing data consistency during concurrent access is a foundational challenge. 
+Consistency can be specified in the form of constraints or invariants. When all specified invariants are satisfied, a database is considered consistent. 
+Database constraints can be \textbf{physical}, e.g. \emph{If record A refers to record B, then record B must exist}, or \textbf{logical}, e.g. \emph{The sum of money in all accounts must be constant}.
 
-However, as data models evolve to incorporate intricate hierarchies and highly connected structures like graphs and networks, traditional approaches to MGL require adaptation. Hierarchical data models are common in domains such as file systems, organizational structures, ontologies, and XML databases. These models naturally capture relationships across different levels of abstraction, where data elements can be accessed concurrently by multiple users or processes. Such concurrent access raises the possibility of conflicts and inconsistencies, particularly when different parts of the hierarchy or network are accessed simultaneously.
 
-To address these issues, MGL provides a mechanism to manage locks at varying levels of granularity, allowing coarse-grained locks at higher levels of the hierarchy and fine-grained locks at lower levels. This flexibility supports efficient concurrency control by enabling transactions to lock large portions of data when broad access is required or smaller segments for more specific operations. However, implementing MGL effectively in systems with complex hierarchies and interconnected data structures introduces unique challenges. Balancing performance with fairness becomes crucial, as the system’s performance depends on minimizing lock contention and avoiding deadlocks, while ensuring that locks at different levels can coexist without causing unnecessary blocks or resource wastage.
+A transaction is a series of accesses (reads and writes) to data. It is delimited by a \emph{begin} and a \emph{commit}. Together, they group accesses into a single unit of work which is applied atomically.  
+A correct transaction, when applied to a consistent database, should produce a consistent database.
 
-In summary, as data structures grow more intricate, a deeper understanding of multi-granularity locking tailored to hierarchical and graph-based data is essential for achieving scalable, efficient concurrency control. This research aims to address these complexities, exploring adaptations of MGL that can support parallelism and data integrity in environments characterized by complex, multi-level connections.
+However, this notion of correctness does not enforce interim database consistency during a transaction's execution. An application that accesses a database assumes that transactions always \emph{observe} a consistent state.  The pre-application and post-application consistency invariant is not strong enough to guarantee this. Alongside atomicity, a transaction must also remain \textbf{isolated} i.e., it should be able to access the database as if it were the only transaction running. 
+Locks provide a way to implement isolation and prevent a transaction from observing temporarily inconsistent data produced by other concurrent transactions. 
+
+
+
+Modern databases have evolved to incorporate complex data models like hierarchies. These data models are common in domains such as file systems, organizational structures, ontologies, and XML databases. They naturally capture relationships across different levels of abstraction, where data elements can be accessed concurrently by multiple users or processes. Typically, in such models, data is contained in vertices and relationships are represented by edges.
+
+Evidently, in these models, transactions access data by acquiring locks on the vertices that contain said data. In order to access multiple data items atomically and in isolation, a thread may need to acquire multiple locks. 
+Since the topology of a hierarchy and the access pattern is unconstrained, these locks may exist at different levels of the hierarchy.  
+\emph{Multi-granularity locking} (MGL) provides a mechanism to manage locks at varying levels, allowing coarse-grain locks at higher levels of a hierarchy and fine-grain locks at lower levels. This flexibility supports efficient concurrency control by enabling transactions to lock large portions of data when broad access is required or smaller segments for more specific access. 
+However, implementing MGL effectively in systems with complex, interconnected data introduces unique challenges. 
+
+MGL needs to be tailored to hierarchical data to achieve scalable, efficient concurrency control that ensures data consistency. 
+This research explores adaptations of MGL to support a greater degree of parallelism while maintaining consistency in environments characterized by complex topologies. 
+
+% In database systems, maintaining data consistency and integrity during concurrent access is a foundational challenge. As systems grow in scale and complexity, managing data concurrency effectively becomes critical, especially in scenarios where multiple transactions access shared data simultaneously. Locking mechanisms provide a structured approach to concurrency control, with multi-granularity locking (MGL) being a particularly valuable technique. MGL has been widely studied in traditional database settings, especially for table spaces organized in tree-structured data, where it efficiently manages hierarchical access patterns.
+
+% However, as data models evolve to incorporate intricate hierarchies and highly connected structures like graphs and networks, traditional approaches to MGL require adaptation. Hierarchical data models are common in domains such as file systems, organizational structures, ontologies, and XML databases. These models naturally capture relationships across different levels of abstraction, where data elements can be accessed concurrently by multiple users or processes. Such concurrent access raises the possibility of conflicts and inconsistencies, particularly when different parts of the hierarchy or network are accessed simultaneously.
+
+% To address these issues, MGL provides a mechanism to manage locks at varying levels of granularity, allowing coarse-grained locks at higher levels of the hierarchy and fine-grained locks at lower levels. This flexibility supports efficient concurrency control by enabling transactions to lock large portions of data when broad access is required or smaller segments for more specific operations. However, implementing MGL effectively in systems with complex hierarchies and interconnected data structures introduces unique challenges. Balancing performance with fairness becomes crucial, as the system’s performance depends on minimizing lock contention and avoiding deadlocks, while ensuring that locks at different levels can coexist without causing unnecessary blocks or resource wastage.
+
+% In summary, as data structures grow more intricate, a deeper understanding of multi-granularity locking tailored to hierarchical and graph-based data is essential for achieving scalable, efficient concurrency control. This research aims to address these complexities, exploring adaptations of MGL that can support parallelism and data integrity in environments characterized by complex, multi-level connections.
 
 
 % \section{Background and Motivation}
@@ -22,7 +45,8 @@ In summary, as data structures grow more intricate, a deeper understanding of mu
 % Define the main goals of the research. Specific objectives related to CALock and optimal locking grain.
 
 \section{Problem Statement}
-While multi-granularity locking (MGL) is widely applied in simple hierarchical data models, adapting it to handle complex, irregular, and deeply nested hierarchies remains challenging. Traditional MGL approaches often face scalability issues in environments where hierarchies expand significantly in size and depth, or where relationships become less rigid, as in graph-like data models. One core challenge lies in efficiently determining the optimal placement of MGL locks within these intricate structures. This process must consider both the structural depth and irregularity of the hierarchy, which can make lock placement a computationally intensive task.
+While multi-granularity locking (MGL) is widely applied in simple hierarchical data models, adapting it to handle complex, irregular, and deeply nested hierarchies remains challenging. Traditional MGL approaches often face scalability issues in environments where hierarchies expand significantly in size and depth, or where relationships become less rigid, as in graph-like data models. One core challenge lies in efficiently determining a \emph{lockable unit} in these intricate structures. 
+This must consider both the structural depth and irregularity of the hierarchy, which can make lock placement a computationally intensive task.
 
 Furthermore, once locks are set, identifying and managing conflicts between them becomes increasingly complex, especially as parallel transactions interact at multiple levels of the hierarchy. These interactions can introduce significant synchronization challenges, particularly in distributed environments with high latency or frequent partitioning. Addressing these issues requires an extension of existing MGL frameworks that supports not only efficient lock placement and conflict detection but also maintains high performance and data consistency across complex hierarchical structures.
 
@@ -31,9 +55,11 @@ Furthermore, once locks are set, identifying and managing conflicts between them
 
 In this work, we present CALock, a novel MGL protocol designed to address the challenges of concurrency control in complex hierarchical data models. CALock extends the traditional MGL framework to support hierarchies with arbitrary depth and complexity, enabling efficient and scalable concurrency management.
 
-MGL techniques establish the granularity at which a transaction acquires a lock, to optimize access based on the transaction's needs. In CALock, we use a topological partial ordering of the vertices in the hierarchy to establish this granularity. This ordering is defined through a vertex labelling scheme. At runtime, these labels help determine the most suitable lock granularity for a given lock request based on the transaction’s access pattern.
+MGL techniques establish a granularity at which a transaction acquires a lock, to optimize access based on the transaction's needs. In CALock, we use a partial ordering of the vertices in the hierarchy to establish this granularity. This ordering is defined through a vertex labelling scheme.  Each vertex label is a set of common ancestors of the vertex, computed recursively through breadth-first traversal.
+At runtime, these labels help determine the most suitable lock granularity for a given lock request based on the transaction’s access pattern.
 
-CALock attempts to minimize the granularity of a lock, ensuring that each lock covers only the necessary portion of a hierarchy. This approach avoids fixed vertex ordering and the need for frequent relabelling, while still providing the same locking guarantees as other MGL techniques. Each vertex label consists of its set of common ancestors, computed recursively through breadth-first traversal, allowing CALock to achieve flexible and efficient locking in complex, dynamic hierarchies.
+CALock attempts to minimize the granularity of a lock, ensuring that each lock covers the smallest necessary portion of a hierarchy. 
+An added benefit of CALock is that it avoids the need for fixed vertex ordering, which is common in other MGL techniques. This eliminates the overhead of frequent relabelling, while still providing the same guarantees as other MGL protocols.
 
 
 % Existing MGL techniques like intention locks \cite{gray1975granularity} use the topology of the hierarchy to detect lock conflicts but require multiple traversals from the root of the graph to the vertices being locked. 
