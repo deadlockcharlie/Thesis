@@ -1,10 +1,12 @@
 \chapter{Properties of CALock} \label{chap:formalProperties}
 
 \minitoc
-The properties of any algorithm hold importance in guaranteeing behavioural stability. In this chapter, we show that CALock is safe, live and fair. 
-However, it's crucial to emphasize that the discussion of these formal properties only holds true value when the implementation of the locking algorithm is correct and the threads do not try to circumvent the locking protocol or act maliciously. 
-CALock requires the assignment of lock request sequence numbers, setting of the activity indicator and addition of the lock pool to happen atomically. 
-In our implementation, we use a mutex to achieve this. 
+
+A transaction uses the correctness guarantees of a locking protocol to assume certain guarantees regarding other transactions in the system. If all transactions adhere to the protocol, the system will remain correct.
+
+This chapter shows that CALock is safe, live and fair. 
+However, it's crucial to emphasize that the discussion of these formal properties only holds true value when the implementation of the locking algorithm is correct, and the threads do not try to circumvent the locking protocol or act maliciously. 
+For instance, CALock requires the assignment of lock request sequence numbers, setting of the activity indicator and addition of the lock pool to happen atomically. In our implementation, we use a mutex to achieve this. 
 %\subsection[Uniqueness]{Uniqueness}
 %
 %\paragraph{Property} A thread holds a single lock at a time.
@@ -16,22 +18,22 @@ In our implementation, we use a mutex to achieve this.
 \subsection[Safety]{Safety}
 
 
-\paragraph{Property} A thread holding a write lock on a guard has exclusive access to the corresponding grain. Assuming that all threads acquire the lock on a guard corresponding to the targets they access, the system guarantees that when a thread requests a write lock on a guard, it is granted the lock only if no other thread can access the grain protected by this guard.
+\paragraph{Property} A thread holding a write lock on a guard has exclusive access to the corresponding grain. Assuming that all threads acquire the lock on a guard corresponding to the targets they access, the system guarantees that when a thread requests a write lock on a guard, the lock is granted iff no other thread can access the grain protected by this guard.
 
 \paragraph{Discussion} By contradiction, assume that two threads $T_1$ and $T_2$ are granted a write lock on the same vertex $v$. 
-Then the lock pool would contain, at indices 1 and 2 respectively, two lock requests $R_1$ and $R_2$ with the same lock target $v$ and lock mode $wl$. However, they have different sequence numbers since a sequence numbers is assigned atomically before the corresponding request is added.
+Then, the lock pool would contain, at indices 1 and 2, respectively, two lock requests $R_1$ and $R_2$ with the same lock target $v$ and lock mode $wl$. However, they have different sequence numbers since a sequence number is assigned atomically before the adding the corresponding request to the pool.
 
 Then, $T_1$ (resp. $T_2$) iterates over the pool to check for conflicts (Mode conflict, grain conflict). 
 Since all threads iterate over the pool from left to right, $T_1$ would detect a mode and grain conflict with $T_2$ and block at index 2 in the pool if its sequence number is greater than that of $T_2$. Respectively, $T_2$ would detect a mode and grain conflict with $T_1$ and block at index 1 in the pool if its sequence number is greater than that of $T_1$.
-Hence, $T_1$ and $T_2$ are never, simultaneously granted a lock on $v$. Therefore, CALock is safe.
+Hence, $T_1$ and $T_2$ are never simultaneously granted a lock on $v$. Therefore, CALock is safe.
 
 \subsection[Liveness]{Liveness}
 \paragraph{Property} When a thread requests a lock, it is guaranteed to be granted the lock eventually, i.e., 
-the lock acquisition algorithm does not block forever assuming every thread eventually releases the lock it holds.
+the lock acquisition algorithm does not block forever, assuming every thread eventually releases the lock it holds.
 
 \paragraph{Discussion}
-The CALock protocol assumes that threads do not sleep after lock acquisition. The lock protocol finishes with a thread releasing the lock it holds. The lock pool prevents a thread from holding multiple locks since it only contains one position per thread. 
-If a thread wishes to lock multiple vertices, it consolidates the need to lock multiple vertices into a single request in the form of a lock on their LGCA. 
+The CALock protocol assumes that threads do not sleep after lock acquisition. The locking protocol finishes with a thread releasing the lock it holds. The lock pool prevents a thread from holding multiple locks since it only contains one position per thread. 
+If a thread wishes to lock multiple vertices, it consolidates multiple vertices into a single request, a lock on their LGCA. 
 Since a thread holds at most one lock at any given time, deadlocks never occur as there is no circular wait.
 
 The absence of deadlocks combined with the assumed progress of threads ensures that CALock is live. 
@@ -41,23 +43,23 @@ The absence of deadlocks combined with the assumed progress of threads ensures t
 The lock acquisition algorithm does not lead to a starvation of threads.
 
 \paragraph{Discussion}
-CALock uses a FIFO mechanism to grant locks. When a thread is blocked, it is always by a thread that has a lower sequence number.
+CALock uses a FIFO mechanism to grant locks. When a thread is blocked, it is always by a thread with a lower sequence number.
 A thread can be blocked by other threads in the presence of conflicts at most $n$ times ($n$ is the size of the lock pool).  
 % Since sequence numbers are assigned atomically with the addition of the request to the pool a thread is granted its lock after at most $n$ bypasses. 
-After a thread is  bypassed at most $n$ times, the sequence number of that blocked thread would be the lowest and it would be granted the lock it requested. 
+After a thread is bypassed at most $n$ times, the sequence number of that blocked thread would be the lowest, and the lock it requested would be granted. 
 This ensures that no thread starves and CALock is fair.
 
 
 \section{Complexity analysis of CALock} \label{complexityAnalysis}
 
-Beyond the correctness guarantees, the complexity of the locking algorithm is crucial for its practical use. In this section, we discuss the complexity of CALock labelling, relabelling and conflict detection and compare with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}.
+Beyond the correctness guarantees, the time complexity of the locking algorithm is crucial for its practical use in judging its suitability for various use cases. In this section, we discuss the complexity of CALock labelling, relabelling and conflict detection and compare it with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}.
 
 \subsection{Labelling and relabelling}
-The labeling and relabelling algorithm involves two operations.
+The labelling and relabelling algorithm involves two operations.
 \begin{itemize}
-	\item \textbf{Traversal}:Traversal to compute paths is a recursive BFS over the graph starting from the root. The number of edges examined is proportional to the average degree of vertices. In the worst case, where the graph is complete, the degree of any vertex is equal to the number of vertices in the graph. 
+	\item \textbf{Traversal}: Traversal to compute paths is a recursive BFS over the graph starting from the root. The number of edges examined is proportional to the average degree of vertices. In the worst case, where the graph is complete, the degree of any vertex is equal to the number of vertices in the graph. 
 	
-	\item \textbf{Label computation}: When a vertex is visited during traversal, the intersection of its parents' labels is calculated. The number of elements in the label of a vertex is inversely proportional to the number of its parents. Since the label of a vertex is the set of its guarding ancestors which lie on all paths to a vertex, a vertex with more parents has more disjoint paths from the root and fewer guarding ancestors. Consequently, a vertex with more parents has a smaller label. We can approximate this in terms of the vertex degree as well. 
+	\item \textbf{Label computation}: When a vertex is visited during traversal, the intersection of its parents' labels is calculated. The number of elements in the label of a vertex is inversely proportional to the number of its parents. Since the label of a vertex is the set of its guarding ancestors, which lie on all paths to a vertex, a vertex with more parents has more unique paths from the root and fewer guarding ancestors. Consequently, a vertex with more parents has a smaller label. We can approximate this in terms of the vertex degree as well. 
 \end{itemize}
 
 For a graph $G = (V, E)$, let $v = \lvert V \rvert$ be the number of vertices, $e = \lvert E \rvert$ the number of edges and $d_{avg}$ the average degree of a vertex. According to the Handshake lemma, the average degree of a vertex is 
@@ -73,9 +75,11 @@ The complexity of breadth-first traversal over a graph that contains $v$ vertice
 	T(\mathit{BFS}) =\theta(v + v.d_{avg}) 
 \end{equation*}
 
-The size of the label of a vertex is inversely proportional to the number of parents it has and consequently, the time complexity of the set intersection required for label computation is inversely proportional to the average degree which is $\theta(\frac{1}{d_{avg}})$
+The size of the label of a vertex is inversely proportional to the number of paths from the root it has, and consequently, the time complexity of the set intersection required for label computation is inversely proportional to the average degree, which is $\theta(\frac{1}{d_{avg}})$. 
 
-The combined complexity of these operations for the labeling the entire hierarchy is 
+% Assuming uniform distribution of incoming and outgoing edges, the average incoming degree of a vertex is $\frac{d_{avg}}{2}$. So, it takes $\frac{d_{avg}}{2} - 1$ set intersections to compute the label of a vertex. The time complexity of set intersection t
+
+The combined complexity of these operations for labeling the entire hierarchy is 
 \begin{equation*}
 T(Labelling) = 	\theta((v + v.d_{avg}) \times {\frac{1}{d_{avg}}}) = \theta(v+ \frac{v}{d_{avg}})
 \end{equation*}
@@ -89,7 +93,7 @@ In the worst case, the average degree of vertices is 1. Thus, the worst-case com
 
 When a thread requests a lock, it computes the LGCA of the lock targets to be the guard and issues a lock request. 
 The LGCA is computed via a set intersection of the labels of the lock targets. 
-If the lock request is for $q$ lock targets and the time complexity of computing the LGCA is $\theta(\frac{1}{d_{avg}})$, the complexity of finding the lock guard is:
+If the lock request is for $q$ lock targets ($q << v$) and the time complexity of computing the LGCA is $\theta(\frac{1}{d_{avg}})$, the complexity of finding the lock guard is:
 
 \begin{equation*}
 	T(Lock~Guard~Computation) = \theta(\frac{q}{d_{avg}})
@@ -102,7 +106,7 @@ If the lock request is for $q$ lock targets and the time complexity of computing
 % \end{equation}
 % % $\theta(\frac{v}{d_{avg}})$. 
 
-In the best case, the lock request is for a single vertex which does not require LGCA computation and the complexity is $\Omega(1)$. In the worst case, the lock request is for all vertices of the graph and the complexity is $O(v)$. A thread checks conflicts with all other threads i.e. $n$ times, where $n$ is the size of the lock pool. For each position in the lock pool, a set membership test is performed. With an efficient set implementation, the membership can be tested in $O(1)$. The complexity of conflict detection is:
+In the best case, the lock request is for a single vertex, which does not require LGCA computation, and the complexity is $\Omega(1)$. In the worst case, the lock request is for all graph vertices, and the complexity is $O(v)$. A thread checks conflicts with all other threads, i.e. $n$ times, where $n$ is the size of the lock pool. A set membership test is performed for each position in the lock pool. An efficient set implementation can test the membership in $O(1)$. The complexity of conflict detection is:
  
  \begin{equation*}
 	 	T(Conflict~Detection) = \theta(n)
@@ -111,7 +115,7 @@ In the best case, the lock request is for a single vertex which does not require
 
 \section{Complexity Comparison}
 
-Based on the complexity analysis, we compare CALock with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}. The average and worst-case complexities of the labelling, lock guard computation and conflict detection operations are summarized in Tables \ref{table:avgComplexity} and \ref{table:worstComplexity} respectively.
+Based on the complexity analysis, we compare CALock with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}. The average and worst-case complexities of the labelling, lock guard computation and conflict detection operations are summarized in Tables \ref{table:avgComplexity} and \ref{table:worstComplexity}, respectively.
 
 \newcolumntype{Z}{ >{\centering\arraybackslash}X }
 \begin{table}[h]
@@ -148,8 +152,8 @@ Based on the complexity analysis, we compare CALock with the other MGL technique
 
 Since intention locks do not require metadata in the form of labelling, their complexity is only associated with conflict detection. Conflicts in Intention locks are detected by performing a DFS traversal over the graph. Consequently, the complexity of conflict detection is $\theta(v+ {v}.{d_{avg}})$.
 
-For label based techniques, the labelling and lock guard computation are proportional to the average degree of vertices. When labelling the hierarchy, all label based techniques perform either a DFS or a BFS traversal over the graph and have the same time complexity.
-CALock, however, is linear in the number of vertices when computing the lock guard. This is because CALock uses set intersection to compute the lock guard. DomLock, MID and Flexigran use integer intervals and then perform a DFS traversal to find the lock guard corresponding to the lock request. For very complex graphs, CALock labels are smaller than the integer intervals used by DomLock, MID and Flexigran. This results in a lower complexity for CALock in worst-case scenarios.
+For label-based techniques, the labelling and lock guard computation are proportional to the average degree of vertices. When labelling the hierarchy, all label-based techniques perform either a DFS or a BFS traversal over the graph and have the same time complexity.
+CALock, however, is linear in the number of vertices when computing the lock guard. This is because CALock uses a set intersection to compute the lock guard. DomLock, MID, and Flexigran use integer intervals and then perform a DFS traversal to find the lock guard that corresponds to the lock request.  For very complex graphs, CALock labels can be computed faster than the integer intervals used by DomLock, MID and Flexigran. This results in a lower complexity for CALock in worst-case scenarios.
 
 
 

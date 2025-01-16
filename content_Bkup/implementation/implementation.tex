@@ -1,0 +1,350 @@
+\chapter{Implementation}
+\label{chap:implementation}
+
+\minitoc
+
+This chapter provides a comprehensive overview of the implementation of CALock, focusing on its key components: the \emph{labeling mechanism}, \emph{locking protocol}, \emph{lock pool}, and \emph{conflict detection}. The implementation is written in C++, chosen for its ability to deliver high performance and fine-grained control over data structures. 
+To ensure the protocol operates efficiently, several optimizations have been integrated. These include techniques to reduce the size of the labels which conserve memory. Additionally, the implementation minimizes the number of index accesses required to locate the Lowest Guarding Common Ancestor (LGCA), a pivotal step in the locking protocol. These optimizations are designed to balance computational efficiency and scalability, making CALock suitable for hierarchical data structures with varying levels of complexity.
+
+
+\section{Implementation of CALock Labelling}
+\label{sec:calock-labelling}
+The CALock labelling is implemented as the \texttt{CALockLabelling} class which provides a method \texttt{run()} to label the graph. Unlike the description of the protocol in Chapters \ref{chap:calock} and \ref{chap:theory}, which use characters as vertex IDs, the implementation uses integers. This allows for a more compact storage representation as well as faster membership tests. The hierarchy in STMBench consists of 4 different types of vertices. The implementation distinguishes each by assigning them a fixed vertex ID integer suffix. The vertex IDs are assigned as follows:
+
+\begin{itemize}
+    \item Complex Assembly: \texttt{<Identifier>::1}
+    \item Base Assembly: \texttt{<Identifier>::2}
+    \item Composite Part: \texttt{<Identifier>::3}
+    \item Atomic Part: \texttt{<Identifier>::4}
+\end{itemize}
+
+Using this representation, a vertex with STMBench identifier 52 of type \texttt{Atomic Part} has a CALock ID 524.
+
+\subsection{Vertex labels}
+
+The label on each vertex is an ordered set containing the vertex IDs of the guarding ancestors of that vertex. In the implementation, to facilitate fast membership test to detect conflicts as well as finding the LGCA, each vertex contains a \texttt{std::Set} of guarding ancestors and a \texttt{std::Vector} containing an order of these guarding ancestors.  
+
+A vector in C++ provides constant time insertion but is linear for a membership test. To check if an element exists in a vector a search is performed which, in the C++ standard template library, is done via the \texttt{std::find} function.
+
+Since membership tests are frequently used in CALock when locking and also during conflict detection, the implementation uses an auxiliary Set for membership tests and bypasses the linear search complexity of the vector. Together, a vector and a set provide constant order time complexity for membership test as well as label updates.
+
+\begin{lstlisting}[caption={Vertex class with CALock label fields}]
+class Vertex {
+    ...
+    int id;
+    bool hasLabel;
+    vector<int> pathLabel{};
+    set<int> guardingAncestors{};
+    bool isDeleted;
+    ...
+};
+
+\end{lstlisting}
+
+% Using this class, the LGCA is computed by taking the last element of the path label. 
+
+In order to find the LGA(lowest guarding ancestor) of a single vertex, the last element of the \lstinline{pathLabel} vector is returned. When finding the LGCA(lowest guarding common ancestor) of a set of vertices, the intersection of the path labels of the vertices is computed. The last element of the resulting vector is the LGCA.
+
+\begin{lstlisting}[caption={Finding LGCA using path label}]
+int getLSCA() const {
+    if (pathLabel.size() == 1) {
+        return *(--pathLabel.rbegin());
+    } else {
+        return *pathLabel.rbegin();
+    }
+}
+\end{lstlisting}
+
+
+\subsection{Labelling algorithm}
+
+The labelling algorithm is a breadth first traversal over the hierarchy. It is implemented by keeping separate queues for each type of vertex, i.e., Complex Assembly, Base Assembly, Composite Part, and Atomic Part. As the traversal progresses, vertices are labelled in the order of their types, which ensures that the guarding ancestors of a vertex are labelled before the vertex itself.
+Labelling starts from the root of the hierarchy. The root is labelled, and its children are added to their respective queues. The implementation of the labelling algorithm is shown in Listing \ref{lst:labelling-algo}.
+
+\begin{lstlisting}[caption={BFS traversal for CALock labelling}, label={lst:labelling-algo}]
+void CALockLabelling::run(int tid) const{
+    queue<ComplexAssembly *> cassmQ;
+    queue<BaseAssembly *> bassmQ;
+    queue<CompositePart *> cpartQ;
+    queue<AtomicPart *> apartQ;
+
+
+    ComplexAssembly *root = dataHolder->getDesignRoot();
+    vector<int> rootLabel = root->pathLabel;
+    rootLabel.push_back((root->getId() * 10) + 1);
+    root->setPathLabel(rootLabel);
+    cassmQ.push(root);
+
+    while (!cassmQ.empty()) {
+        traverse(cassmQ.front(), &cassmQ, &bassmQ);
+        cassmQ.pop();
+    }
+    while (!bassmQ.empty()) {
+        traverse(bassmQ.front(), &cpartQ);
+        bassmQ.pop();
+    }
+    while (!cpartQ.empty()) {
+        traverse(cpartQ.front(), &apartQ);
+        cpartQ.pop();
+    }
+    while(!apartQ.empty()){
+        Set<AtomicPart *> visitedPartSet;
+        traverse(apartQ.front(), visitedPartSet, apartQ.front()->pathLabel);
+        apartQ.pop();
+    }
+}
+
+\end{lstlisting}
+
+During labelling, the \texttt{traverse} method is called for each vertex in the queue to label it. The \texttt{traverse} method is overloaded for each type of vertex. After computing the label of a vertex, the method adds the children of the vertex into their appropriate queues based on their type. Listing \ref{lst:traverseCA} shows the implementation of the \texttt{traverse} method for a vertex of Complex Assembly type.
+
+\begin{lstlisting}[caption={Labelling a complex assembly},label={lst:traverseCA}]
+void traverse(  ComplexAssembly *cassm, 
+                queue<ComplexAssembly *> *cassmQ, 
+                queue<BaseAssembly *> *bassmQ) const {
+
+    list<int> currLabel = cassm->pathLabel;
+    Set<Assembly *> *subAssm = cassm->getSubAssemblies();
+    SetIterator<Assembly *> iter = subAssm->getIter();
+    bool childrenAreBase = cassm->areChildrenBaseAssemblies();
+
+    while (iter.has_next()) {
+        Assembly *assm = iter.next();
+        // If children are Complex Assemblies, add them to the Complex Assembly queue.
+        if (!childrenAreBase) {
+            int labelIdentifier = (assm->getId() * 10) + 1;
+            currLabel.push_back(labelIdentifier);
+            assm->setPathLabel(currLabel);
+            cassmQ->push((ComplexAssembly *) assm);
+        } else {
+        // If children are Base Assemblies, add them to the Base Assembly queue.
+            int labelIdentifier = (assm->getId() * 10) + 2;
+            currLabel.push_back(labelIdentifier);
+            assm->setPathLabel(currLabel);
+            bassmQ->push((BaseAssembly *) assm);
+        }
+        currLabel.pop_back();
+    }
+}
+
+
+\end{lstlisting}
+
+
+
+\begin{lstlisting}[caption={Labelling an atomic part},label={lst:traverseAP}]
+void traverse(AtomicPart *apart, 
+    Set<AtomicPart *> &visitedPartSet, 
+    list<int> currLabel) const {
+
+    if (apart == NULL || visitedPartSet.contains(apart)) {
+        return;
+    } else {
+        visitedPartSet.add(apart);
+        Set<Connection *> *fromConns = apart->getFromConnections();
+        SetIterator<Connection *> fiter = fromConns->getIter();
+
+        // Find elements that need to be removed from the label.
+        set<int> removals;
+        for (int a: currLabel) {
+            while (fiter.has_next()) {
+                if (!fiter.next()->getSource()->criticalAncestors.contains(a)) {
+                    removals.insert(a);
+                    break;
+                }
+            }
+            fiter = fromConns->getIter();
+        }
+
+        currLabel.remove_if([removals](int l) { return removals.contains(l); });
+
+        // If the label has changed, update it in the vertex and traverse the children.
+        if (currLabel != apart->pathLabel) {
+            apart->setPathLabel(currLabel);
+            Set<Connection *> *toConns = apart->getToConnections();
+            SetIterator<Connection *> iter = toConns->getIter();
+            while (iter.has_next()) {
+                Connection *conn = iter.next();
+                currLabel.push_back((conn->getDestination()->getId() * 10) + 4);
+                traverse(conn->getDestination(), visitedPartSet, currLabel);
+                currLabel.pop_back();
+            }
+        }
+        visitedPartSet.remove(apart);
+    }
+}
+\end{lstlisting}
+
+
+Atomic Part graph in STMBench is dense and contain many cycles. Due to this, atomic Parts are handled differently since an atomic part vertex can be visited multiple times. An atomic part graph is connected to the hierarchy under a composite part via a single vertex called the \texttt{rootPart}. The \texttt{rootPart} is designated as the root of the atomic part graph. Once this root is labelled, the algorithm traverses the graph of atomic parts in a post-order fashion. The implementation of the \texttt{traverse} method for an Atomic Part is shown in Listing \ref{lst:traverseAP}.
+
+
+
+\section{Lock Requests and the Lock Pool}
+
+Once a thread wishes to lock a set of targets, it creates a lock request. The lock request is implemented as a \texttt{lockObject} which is inserted into the lock pool. This \texttt{lockObject} contains the following fields:
+
+\begin{itemize}
+    \item \texttt{int Id}: Guard ID.
+    \item \texttt{set<int> *criticalAncestors}: Set of guarding ancestors.
+    \item \texttt{int mode}: Mode of the lock (Read/Write).
+    \item \texttt{long Oseq}: Sequence number to decide the arrival order of the lock requests.
+    \item \texttt{atomic\_flag accessController}: Flag which conflicting threads use to wait on this thread.
+\end{itemize}
+
+The \texttt{lockObject} class is shown in Listing \ref{lst:lock-object}. 
+
+\begin{lstlisting}[caption={Lock Object class}, label={lst:lock-object}]
+class lockObject {
+public:
+    set<int> *criticalAncestors;
+    int Id;
+    int mode;
+    long Oseq;
+    atomic_flag accessController = ATOMIC_FLAG_INIT;
+
+    lockObject(int pId, set<int> *ancestors, int m) {
+        Id = pId;
+        criticalAncestors = ancestors;
+        mode = m;
+        Oseq = -1;
+        accessController.test_and_set();
+    }
+};
+\end{lstlisting}
+
+The lock pool is an array that contains \texttt{lockObjects}. The size is fixed and bounded to the number of concurrent hardware threads provided by the system. Listing \ref{lst:lock-pool} shows the class definition of the lock pool.
+
+\begin{lstlisting}[caption={Lock Pool class}, label={lst:lock-pool}]
+class CAPool {
+public:
+    mutex lockPoolLock;
+    lockObject *locks[SIZE];
+    shared_mutex threadMutexes[SIZE];
+    condition_variable_any threadConditions[SIZE];
+    long int Gseq;
+
+    CAPool() {
+        Gseq = 0;
+        for (int i = 0; i < SIZE; i++) {
+            locks[i] = nullptr;
+        }
+    }
+    bool acquireLock(lockObject *reqObj, int threadID) {
+        //Check for conflicts and wait for resolution
+    }
+    void releaseLock(lockObject *l, int threadId) {
+        //Release the lock
+    }
+};
+\end{lstlisting}
+
+
+When acquiring a lock, a thread inserts a \texttt{lockObject} corresponding to its lock request into the pool and waits for the lock to be granted. The \texttt{acquireLock} method is responsible for checking for conflicts and waiting for resolution. The method is shown in Listing \ref{lst:acquire-lock}.
+
+\begin{lstlisting}[caption={Acquiring a lock}, label={lst:acquire-lock}]
+bool acquireLock(lockObject *reqObj, int threadID) {
+    lockPoolLock.lock();
+    reqObj->Oseq = ++Gseq;
+    locks[threadID] = reqObj;
+    lockPoolLock.unlock();
+    for (int i = 0; i < SIZE; i++) {
+        // A thread won't run into conflict with itself.
+        if (locks[i] != nullptr) {
+            auto l = locks[i];
+            if (l != nullptr &&
+                // Mode Conflict.
+                (reqObj->mode == 1 || 
+                (reqObj->mode == 0 && l->mode == 1)) &&
+                // Grain Overlap.
+                (reqObj->Id == l->Id ||
+                reqObj->criticalAncestors->contains(l->Id) ||
+                l->criticalAncestors->contains(reqObj->Id)) &&
+                // Arrival Order.
+                (reqObj->Oseq > l->Oseq)) {
+                // Wait for resolution and notification.
+                l->accessController.wait(true);
+            }
+        }
+    }
+    return true;
+}
+\end{lstlisting}
+
+When acquiring a lock, the lock request is first assigned a sequence number (\texttt{Oseq}) and then inserted into the lock pool. This assignment and insertion into the pool is done under a mutex lock on the pool to prevent a race condition between the assignment of a sequence number and insertion into the pool. 
+
+Once a lock request is inserted into the pool, the method checks for conflicts with other lock requests in the pool. This check can be performed in parallel for all lock requests in the pool. If no conflict is detected, the lock is granted and the thread can proceed to its operation.
+
+If a conflict is detected, the thread waits for resolution. This is done by waiting on the \texttt{accessController} of a conflicting lock request flag to become \texttt{false} (Listing \ref{lst:acquire-lock} - line 21).  
+
+\begin{lstlisting}[caption={Releasing a lock}, label={lst:release-lock}]
+    void releaseLock(lockObject *l, int threadId) {
+        locks[threadId] = nullptr;
+        l->accessController.clear();
+        l->accessController.notify_all();
+    }
+\end{lstlisting}
+
+When a thread releases a lock, it removes the lock request from the pool, changes its \texttt{accessController} flag to \texttt{false}, and notifies all waiting threads. The \texttt{releaseLock} method is shown in Listing \ref{lst:release-lock}. Once waiting threads are notified, they resume execution and proceed to check for further conflicts in the lock pool.
+
+
+After checking for conflicts with all lock requests in the pool and having waited on conflicting requests, a thread reaches the end of the lock pool (Listing \ref{lst:acquire-lock} - line 6). At this point, the lock is always granted as there are two possible scenarios:
+
+\begin{enumerate}
+    \item[\textbf{a}.] The lock request is not in conflict with any other lock request in the pool (Listing \ref{lst:acquire-lock} - lines 12, 13).
+    \item[\textbf{b}.] The lock request has priority over all conflicting lock requests in the pool because its sequence number is smaller than all conflicting lock requests (Listing \ref{lst:acquire-lock} - line 19). 
+\end{enumerate}
+
+
+
+\section{Overall execution of an operation in CALock}
+
+The overall execution of an operation in CALock is shown in Listing \ref{lst:overall-execution}. The operation is executed in the \texttt{run()} method of the \texttt{operation} class. The listing shows a structural modification in which a composite part is added to a base assembly.
+
+This operation first computes the set intersection of the labels of the base assembly and the composite part (Listing \ref{lst:overall-execution} - lines 8-12). This set intersection is used to find the LGCA of the base assembly and the composite part. If the LGCA is disconnected, the base assembly is used as the LGCA (Listing \ref{lst:overall-execution} - lines 14-19).
+
+A lock request is then created with the LGCA and the guarding ancestors in write mode (Listing \ref{lst:overall-execution} - line 21). The lock is acquired using the \texttt{acquireLock()} method of the lock pool. As long as the lock is not granted, the thread waits for resolution (Listing \ref{lst:overall-execution} - line 24). Once granted, the operation is performed (Listing \ref{lst:overall-execution} - line 26).
+
+Since a structural modification has occurred, the hierarchy is relabelled. This is done by executing a relabelling operation and adding the composite part to the queue of parts for relabelling (Listing \ref{lst:overall-execution} - lines 28-30). 
+
+After relabelling is complete, the lock is released via the \texttt{releaseLock()} method of the lock pool (Listing \ref{lst:overall-execution} - line 32).
+
+
+\begin{lstlisting}[caption={Overall execution of an operation in CALock}, label={lst:overall-execution}]
+int CAStructuralModification3::run(int tid) const {
+    CompositePart *cpart = dataHolder->getCompositePart(cpartId);
+    BaseAssembly *bassm = dataHolder->getBaseAssembly(bassmId);
+
+    list<int> lockLabel = {};
+
+    // Find the set intersection of the labels of bassm and cpart.
+    for (int a: bassm->pathLabel) {
+        if (cpart->criticalAncestors.contains(a)) {
+            lockLabel.push_back(a);
+        }
+    }
+
+    // find the LGCA of the bassm and cpart.
+    pair<DesignObj *, bool> lo = lscaHelpers::getLockObject(lockLabel);
+    //if cassm is disconnected, use bassm as the LGCA.
+    if (!lo.second) {
+        lo.first = bassm;
+    }
+    //create a lock request with the LGCA and the guarding ancestors in write mode. 
+    auto *l = new lockObject(lo.first->getLabellingId(), &lo.first->criticalAncestors, 1);
+
+    // Acquire the lock.
+    if (caPool.acquireLock(l, tid)) {
+        // Perform the operation.
+        bassm->addComponent(cpart);
+        // Relabel the hierarchy because a structural modification has occurred.
+        auto *r = new CALockRelabeling(dataHolder, tid);
+        r->cpartQ.push(cpart);
+        r->run();
+        // Release the lock.
+        caPool.releaseLock(l, tid);
+    }
+
+}
+
+\end{lstlisting}

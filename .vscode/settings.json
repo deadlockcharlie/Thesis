@@ -2,8 +2,11 @@
     "latex-workshop.latex.autoBuild.run": "onSave",
     "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
     "cSpell.words": [
+        "Asterix",
+        "FCFS",
         "flexigran",
         "Multicore",
+        "Obelix",
         "parallelizable",
         "Saalik",
         "Sopena"

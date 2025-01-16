@@ -1,0 +1,15 @@
+% !TEX root = ../main.tex
+%
+\pdfbookmark[0]{Résumé}{Résumé}
+\addchap*{Résumé}
+\label{chap:résumé}
+
+\vspace*{8mm}
+Les hiérarchies servent de structure fondamentale dans diverses disciplines, modélisant les relations hiérarchiques en informatique, en biologie, dans les réseaux sociaux ou en logistique. Cependant, les mises à jour concurrentes dans les systèmes réels nécessitent de la synchronisation pour maintenir la cohérence des données. Notre travail explore une nouvelle approche, appelée CALock, pour  synchroniser les opérations sur une hiérarchie, en utilisant un schéma d’étiquetage qui facilite le verrouillage à granularité multiple.
+
+Notre approche concerne tout à la fois l'accès concurrent aux données ainsi que les modifications de structure. CALock exploite la topologie hiérarchique, par le biais d’un nouveau schéma d’étiquetage, permettant d’identifier les ancêtres communs de sommets. Cela permet à un fil d'exécution d’identifier le grain de verrouillage approprié de façon efficace. L’utilisation de grains de verrouillage multiples optimise les opérations sur la hiérarchie, tout en garantissant la cohérence et les performances.
+
+Nous présentons une discussion détaillée de l’étiquetage CALock et de l’algorithme de verrouillage. Nous prouvons leurs propriétés, et nous les évaluons de manière expérimentale. Sur des hiérarchies statiques, CALock reste compétitif par rapport aux schémas d’étiquetage précédents.  En présence de modifications de structure, CALock améliore la concurrence et le débit. En particulier, CALock améliore le débit jusqu’à 4,5×, et le temps de réponse par jusqu'à 1,5×, pour des charges contenant des modifications structurelles.
+
+\textbf{Mots-clés:} 
+Verrouillage multi-granularité, Données hiérarchiques, Graphes, Verrouillage, Synchronisation, Topologie des graphes, Ancêtres. 

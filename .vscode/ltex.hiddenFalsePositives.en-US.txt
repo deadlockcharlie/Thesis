@@ -11,3 +11,4 @@
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QIn certain cases, the intervals of all vertices are recomputed which is extremely expensive for large hierarchies.\\E$"}
 {"rule":"A_INFINITIVE","sentence":"^\\QIn order to perform a structural modification, a thread acquires a write lock on the LSCA of the affected vertices.\\E$"}
 {"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QIn write heavy workloads without structural modifications, CALock is 2 times faster than coarse-grained and medium-grained locks and 4 times faster than DomLock, MID and FlexiGran\\E$"}
+{"rule":"A_INFINITIVE","sentence":"^\\QFor example, consider two threads, \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q and \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q, both requesting a write lock on the same vertex \\E(?:Dummy|Ina|Jimmy-)[0-9]+\\Q.\\E$"}
