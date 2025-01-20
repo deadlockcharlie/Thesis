@@ -1,17 +1,17 @@
-\chapter{Related Work} \label{chap:relatedwork}
+\chapter{Related work} \label{chap:relatedwork}
 
 \minitoc
 
 Multi-granularity locking is a well-known solution to the problem of hierarchical locking in database systems. 
 With MGL, locking a vertex in a hierarchy in a specific mode implicitly locks its descendants in the same mode. 
-This powerful concept allows for efficient locking of hierarchical data structures without the need to lock large portions of the hierarchy explicitly.
+This powerful concept allows for efficient locking of hierarchical data structures without explicitly locking large portions of the hierarchy.
 While powerful, implementing an MGL protocol that successfully achieves this goal is non-trivial. 
 
 
-The locking approaches discussed in this chapter use different mechanisms to address the requirements specified in Section \ref{chap:background}, each with its tradeoffs. 
+The locking approaches discussed in this chapter use different mechanisms to address the requirements specified in \cref{chap:background}, each with its tradeoffs. 
 It would be appropriate to claim that no approach is all-encompassing, and the locking approach choice depends on the application's specific requirements and the hierarchy being used. We present each lock mechanism's strengths, weaknesses and niche.
 
-Finally, we present the tradeoffs between them and motivate the need for a new hierarchical locking protocol that addresses the existing protocols' limitations by classifying them into categories based on the requirements they fulfil.
+Finally, we present the tradeoffs between them and motivate the need for a new hierarchical locking protocol that addresses the existing protocols' limitations by classifying them based on the requirements they fulfil.
 
 
 \section{Classical locking approaches for connected data}
@@ -52,17 +52,17 @@ Fixed-grain locking has two extremes: We can have a single lock guard for all th
 \end{figure}
 
 
-\subsection{Coarse-Grain Locking}
+\subsection{Coarse-grain locks}
 An oversimplified approach for correct thread synchronization is to guard an entire hierarchy with a single read-write lock such that any thread accessing the hierarchy must first acquire this lock.
-This approach is called \emph{coarse-grain locking} and is shown in Figure \ref{fig:fixedLockGrainsCoarse}.
+This approach is called \emph{coarse-grain locking} and is shown in \cref{fig:fixedLockGrainsCoarse}.
 A thread that wishes to access any vertex in the hierarchy must first acquire a lock on the entire data structure and consequently block all other writers until it releases this lock. 
 Coarse-grain locking is simple to implement and has extremely low locking overhead but suffers from the highest possible contention as all threads must acquire the same lock to access any part of the hierarchy. 
 
 
-\subsection{Fine-Grain Locking}
-Another well-known approach to locking is to designate every target vertex as its own guard, i.e. every vertex has its own unique lock. 
+\subsection{Fine-grain locks}
+Another well-known approach to locking is to designate every target vertex as its own guard, i.e., every vertex has its own unique lock. 
 We call this \emph{fine-grain locking}.
-As shown in Figure \ref{fig:fixedLockGrainsFine}, vertices are locked individually, and a thread that needs to access multiple vertices must acquire multiple locks. 
+As shown in \cref{fig:fixedLockGrainsFine}, vertices are locked individually, and a thread that needs to access multiple vertices must acquire multiple locks. 
 Fine-grain locking has the advantage of reducing contention as threads can access disjoint parts of the hierarchy concurrently. 
 However, the overhead of acquiring multiple locks makes this approach less efficient. 
 
@@ -82,18 +82,18 @@ Since \emph{granularity} depends on the topology of the graph and the lock reque
     \captionsetup{justification=centering}
     \includegraphics[width=\textwidth]{figures/MGLSpectrum.png}
     \label{fig:mglspectrum}
-    \caption{Multi-Granularity locking provides a balance between Fine-grain and Coarse-grain locking.}
+    \caption{Multi-Granularity locking provides a balance between fine-grain and coarse-grain locking.}
 \end{figure}
 
 
 
-\subsection{Intention Lock}
+\subsection{Intention lock}
 
 To lock a sub-graph rooted at a vertex $v$, it is necessary to prevent other threads from locking the ancestors of $v$ in shared or exclusive mode. To achieve this, \citet{gray1975granularity} introduced the concept of \emph{intention locks}. Intention locks coordinate concurrent access by indicating a thread's intention to acquire more fine-grain locks within a hierarchy. 
 
-Intention locking was one of the first approaches to hierarchical locking designed to meet requirements \Rb and \Rc efficiently. Intention locking uses three new lock modes, IX (Intention Exclusive), IS (Intention Shared), and SIX (Shared with Intention Exclusive), which allow a thread to signify its intention to acquire an exclusive lock, a shared lock or a shared lock which can be upgraded to an exclusive lock on any descendant of the vertex locked under IX, IS or SIX modes, respectively. In the intention lock protocol, a thread acquires these intention locks on all vertices on all paths from the root to the lock target, which is then locked in either a shared (S) or exclusive (X) mode. Thus, all the ancestors of a target vertex are locked in an intention mode, and the target vertex is locked in a shared or exclusive mode.
+Intention locking was one of the first approaches to hierarchical locking designed to efficiently meet requirements \Rb and \Rc. Intention locking uses three new lock modes, IX (Intention Exclusive), IS (Intention Shared), and SIX (Shared with Intention Exclusive), which allow a thread to signify its intention to acquire an exclusive lock, a shared lock or a shared lock which can be upgraded to an exclusive lock on any descendant of the vertex locked under IX, IS or SIX modes, respectively. In the intention lock protocol, a thread acquires these intention locks on all vertices on all paths from the root to the lock target, which is then locked in either a shared (S) or exclusive (X) mode. Thus, all the ancestors of a target vertex are locked in an intention mode, and the target vertex is locked in a shared or exclusive mode.
 
-The protocol requires that threads place these locks in a depth-first manner. This ordering ensures that two concurrent threads trying to lock the same target detect conflicts deterministically. Table \ref{tab:intention_locks} shows the compatibility matrix for the intention locks.
+The protocol requires that threads place these locks in a depth-first manner. This ordering ensures that two concurrent threads trying to lock the same target detect conflicts deterministically. \cref{tab:intention_locks} shows the compatibility matrix for the intention locks.
 
 
 
@@ -120,33 +120,33 @@ The protocol requires that threads place these locks in a depth-first manner. Th
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=0.6\textwidth]{figures/IntentionLockExample.png}
-    \caption{Multi granularity locking via Intention locks. \\ $T_1$ takes an exclusive lock on vertex $D$ and $T_2$ takes an exclusive lock on vertex $G$ }
+    \caption{Multi granularity locking using intention locks. \\ $T_1$ takes an exclusive lock on vertex $D$ and $T_2$ takes an exclusive lock on vertex $G$ }
     \label{fig:intention_lock_example}
 \end{figure}
 
-Consider the example in Figure \ref{fig:intention_lock_example} where a thread $T_1$ wishes to acquire an exclusive lock (X) on target vertex $D$ and another thread, $T_2$, on target vertex $G$. 
+Consider the example in \cref{fig:intention_lock_example} where a thread $T_1$ wishes to acquire an exclusive lock (X) on target vertex $D$ and another thread, $T_2$, on target vertex $G$. 
 
-With intention locks, both threads start from the root ($A$) and acquire intention-exclusive locks (IX) on the vertices from the root to their lock targets, i.e. $D$ and $G$, respectively. 
+With intention locks, both threads start from the root ($A$) and acquire intention-exclusive locks (IX) on the vertices from the root to their lock targets, i.e., $D$ and $G$, respectively. 
 Let's assume that $T_1$ is faster than $T_2$ and manages to acquire its locks first. 
 $T_1$ acquires IX on vertices $A$, $B$ and $C$, in this order, and acquires an exclusive lock on $D$. 
 
 When $T_2$ tries to acquire a lock on $G$, it acquires IX on vertices $A$ and $C$, in this order, before trying to acquire a lock on $G$. 
 When $T_2$ tries to acquire a lock on $A$, it encounters a pre-existing  IX lock acquired by $T_1$. 
-Since two IX locks are compatible, as seen in Table \ref{tab:intention_locks}, $T_2$ can acquire the IX lock on $A$.
+Since two IX locks are compatible, as seen in \cref{tab:intention_locks}, $T_2$ can acquire the IX lock on $A$.
 Similarly, $T_2$ can acquire the IX lock on $C$ and then acquire an exclusive lock on $G$.
 
 
 By locking the vertices on the path to the target vertex under IS and IX modes, always in a depth-first manner, 
 intention locking protocol correctly identifies lock grain overlaps. 
 However, this process requires multiple traversals from the root to the lock target to lock all paths. 
-In the example of Figure \ref{fig:intention_lock_example}, $T_1$ must perform the following two traversals:
+In the example of \cref{fig:intention_lock_example}, $T_1$ must perform the following two traversals:
 
 \begin{itemize}
     \item $A \rightarrow B \rightarrow D$
     \item $A \rightarrow C \rightarrow D$
 \end{itemize}
 
-Once a thread has acquired the lock and performed the necessary accesses, it releases the locks from the leaves to the root. This, again, requires traversals. In the example in Figure \ref{fig:intention_lock_example}, $T_1$ must release the X locks on $D$ and $G$, respectively. Then, backtrack towards the root to release the IX locks on $B$ and $C$ and finally release the IX lock on $A$. This involves the following two traversals:
+Once a thread has acquired the lock and performed the necessary accesses, it releases the locks from the leaves to the root. This, again, requires traversals. In the example in \cref{fig:intention_lock_example}, $T_1$ must release the X locks on $D$ and $G$, respectively. Then, backtrack towards the root to release the IX locks on $B$ and $C$ and finally release the IX lock on $A$. This involves the following two traversals:
 
 \begin{itemize}
     \item $D \rightarrow B \rightarrow A$
@@ -166,7 +166,7 @@ So, while intention locks fulfil requirement \Rb, requirement \Rc incurs a signi
 \subsection{DomLock}
 DomLock \cite{kalikar2016domlock} is an MGL technique that uses the concept of \emph{dominators} to identify lock grains instead of relying on explicitly locking paths that lead to a target. A dominator is a vertex on all paths from the root to a target vertex $v$. A dominator is thus an effective lock guard for its descendants since locking a dominator is sufficient to lock all the paths to $v$ (and the descendants of $v$).
 
-\begin{definition}[Dominator]
+\begin{definition}[\textbf{Dominator}]
     A vertex $d$ is a dominator of another vertex $v$ if all the paths from the root to $v$ pass through d.
 \end{definition}
 
@@ -174,26 +174,26 @@ A vertex can have several dominators.
 To maximize concurrency, DomLock uses the \emph{dominator of maximum depth} as the lock guard. This dominator is called the immediate dominator. 
 
 
-\begin{definition}[Immediate Dominator]
-    Immediate Dominator: A dominator $\mathcal{D}$ is an immediate dominator of another vertex $v$ if no other dominator exists for $v$ on the paths between $\mathcal{D}$ and $v$.
+\begin{definition}[\textbf{Immediate dominator}]
+    A dominator $\mathcal{D}$ is an immediate dominator of another vertex $v$ if no other dominator exists for $v$ on the paths between $\mathcal{D}$ and $v$.
 \end{definition}
 
 This immediate dominator is the deepest vertex that lies on all paths from the root of the hierarchy to a target vertex. Therefore, it is sufficient to lock this immediate dominator to lock all the descendants since any traversal to the target vertex or its descendants shall encounter the immediate dominator.
 
-\subsubsection{Preprocessing and Metadata}
+\subsubsection{Preprocessing and metadata}
 
 To identify the dominators of a vertex more efficiently, DomLock uses a labelling scheme that assigns a pair of integers to each vertex. This pair, called the \emph{interval} of a vertex $v$ is denoted  $I_v = [l_v, r_v]$. 
 A vertex $u$ is a dominator of another vertex $v$ if the interval of $u$ ($I_u$) subsumes the interval of $v$ ($I_v$). Subsumption ($\prec$) is defined as follows.
 
 
 % This interval $I_v$ subsumes the intervals of all the descendants of $v$. Subsumption is defined as follows:
-\begin{equation}
+\begin{equation*}
     u \text{ is a dominator of } v \iff I_u \prec I_v \iff l_v \leq l_u \land r_v \geq r_u
-\end{equation}
+\end{equation*}
 
 % It is such that $l_v \leq l_u$ and $r_v \geq r_u$ for all vertices $u$ that are descendants of $v$. 
 
-A post-order traversal of the hierarchy computes these intervals. Consider the example in Figure \ref{fig:domlock_example_locked}. A leaf is labelled with a unit interval. For example, vertex $D$ is labelled with the interval $[1, 1]$ since it is the first vertex in the post-order traversal.  
+A post-order traversal of the hierarchy computes these intervals. Consider the example in \cref{fig:domlock_example_locked}. A leaf is labelled with a unit interval. For example, vertex $D$ is labelled with the interval $[1, 1]$ since it is the first vertex in the post-order traversal.  
 
 \begin{figure}
     \centering
@@ -203,7 +203,7 @@ A post-order traversal of the hierarchy computes these intervals. Consider the e
     \label{fig:domlock_example_locked}
 \end{figure}
 
-The interval of an internal vertex is computed from its children's. The $l$ value of an internal vertex $v$ is the minimum of the $l$ values of its children, and its $r$ value is the maximum of the $r$ values of its children. For example, in Figure \ref{fig:domlock_example_locked}, vertex $G$ has three children $H$, $I$ and $J$. The interval of $G$ is $[3,4]$ since the minimum $l$ value of its children is 3 and the maximum $r$ value of its children is 4. In turn, G is a dominator of \{H, I, J\}
+The interval of an internal vertex is computed from its children's. The $l$ value of an internal vertex $v$ is the minimum of the $l$ values of its children, and its $r$ value is the maximum of the $r$ values of its children. For example, in \cref{fig:domlock_example_locked}, vertex $G$ has three children $H$, $I$ and $J$. The interval of $G$ is $[3,4]$ since the minimum $l$ value of its children is 3 and the maximum $r$ value of its children is 4. In turn, G is a dominator of \{H, I, J\}
 % \begin{figure}[h]
 %     \centering
 %     \captionsetup{justification=centering}
@@ -212,24 +212,24 @@ The interval of an internal vertex is computed from its children's. The $l$ valu
 %     \label{fig:domlock_example_locked}
 % \end{figure}
 
-\subsubsection{Lock acquisition and Conflicts}
+\subsubsection{Lock acquisition and conflicts}
 
-In order to identify the lock grain, DomLock uses the intervals of the targets of a lock request. The immediate dominator is chosen as the lock guards, given a set of lock targets. This is done by finding the vertex with the smallest interval that subsumes the intervals of all lock targets.
+To identify the lock grain, DomLock uses the intervals of the targets of a lock request. The immediate dominator is chosen as the lock guards, given a set of lock targets. This is done by finding the vertex with the smallest interval that subsumes the intervals of all lock targets.
 Finding the immediate dominator involves a depth-first search from the root of the hierarchy.  
 
-For example, in Figure \ref{fig:domlock_example_locked}, suppose a thread wants to acquire a lock on vertices $H$ and $J$ with intervals $[3,3]$ and $[4,4]$, respectively. The interval of the guard should subsume the intervals of $H$ and $J$. The smallest possible interval to achieve this is $[3,4]$. A depth-first search is performed to identify the deepest vertex with interval $[3,4]$. DomLock identifies G as the lock guard for this lock request. The grain of $G$ contains $F$, $H$, $I$ and $J$ since the interval of $G$ subsumes the intervals of $F$, $H$, $I$ and $J$ which are $[3,3]$, $[3,3]$, $[4,4]$ and $[4,4]$ respectively.
+For example, in \cref{fig:domlock_example_locked}, suppose a thread wants to acquire a lock on vertices $H$ and $J$ with intervals $[3,3]$ and $[4,4]$, respectively. The interval of the guard should subsume the intervals of $H$ and $J$. The smallest possible interval to achieve this is $[3,4]$. A depth-first search is performed to identify the deepest vertex with interval $[3,4]$. DomLock identifies G as the lock guard for this lock request. The grain of $G$ contains $F$, $H$, $I$ and $J$ since the interval of $G$ subsumes the intervals of $F$, $H$, $I$ and $J$ which are $[3,3]$, $[3,3]$, $[4,4]$ and $[4,4]$ respectively.
 
 By using numeric intervals, DomLock approximates the ancestor-descendant relationship in the hierarchy. The subsumption property aims to ensure that the interval of a vertex $v$ only subsumes the intervals of all its descendants. However, this is not always the case. 
-Intervals are assigned by a post-order traversal. In certain cases, these intervals provide false positives when identifying the ancestor-descendant relationship. We call such false positives, \emph{False subsumptions}. 
+A post-order traversal assigns intervals. These intervals sometimes cause false positives when identifying the ancestor-descendant relationship. We call such false positives, \emph{False subsumptions}. 
 % Subsumption is a property between two vertices related via an ancestor-descendant relationship. 
 False subsumption occurs when the intervals of two vertices overlap, but they are not related by an ancestor-descendant relationship. 
-For example, in Figure \ref{fig:domlock_example_locked}, $G$ is a dominator of $F$, but $F$ is not a descendant of $G$. 
+For example, in \cref{fig:domlock_example_locked}, $G$ is a dominator of $F$, but $F$ is not a descendant of $G$. 
 Due to false subsumption, disjoint subgraphs are sometimes locked together since they are associated with the same lock guard. 
 This leads to spurious lock conflicts and, consequently, performance degradation. 
 
-To test for a \textbf{grain conflict} between two lock requests, the intervals of the lock guards of the two requests are compared. Overlapping intervals indicate a conflict. For example, in Figure \ref{fig:domlock_example_locked}, along with a lock on G, another lock can be acquired on B since the intervals $[3,4]$ and $[1,2]$ respectively do not overlap. However, a lock on C will conflict with a lock on G since the interval of C ($[1,4]$) overlaps with the interval of G ($[3,4]$).
+To test for a \textbf{grain conflict} between two lock requests, the intervals of the lock guards of the two requests are compared. Overlapping intervals indicate a conflict. For example, in \cref{fig:domlock_example_locked}, along with a lock on G, another lock can be acquired on B since the intervals $[3,4]$ and $[1,2]$ respectively do not overlap. However, a lock on C will conflict with a lock on G since the interval of C ($[1,4]$) overlaps with the interval of G ($[3,4]$).
 
-\subsubsection{Metadata Maintainance}
+\subsubsection{Metadata maintainance}
 
 Another drawback of DomLock is that it does not support dynamic hierarchies without relabeling a large part of the hierarchy.
 Since intervals are used to identify lock grains, they must be recomputed when a structural modification occurs.
@@ -243,11 +243,10 @@ Since intervals are used to identify lock grains, they must be recomputed when a
     \label{fig:domlock_example_SM}
 \end{figure}
 
-For example, consider the hierarchy in Figure \ref{fig:domlock_example_SM}. If a vertex $K$ is added as a child of $G$ after $H$, $K$ can only have interval $[4,4]$. This forces $I$ and $J$ to get interval $[5,5]$ and the interval of $G$ must be recomputed to $[3,5]$. This recomputation has to be done for all the ancestors of $G$ as well up to the root of. 
+For example, consider the hierarchy in \cref{fig:domlock_example_SM}. If a vertex $K$ is added as a child of $G$ after $H$, $K$ can only have interval $[4,4]$. This forces $I$ and $J$ to get interval $[5,5]$ and the interval of $G$ must be recomputed to $[3,5]$. This recomputation has to be done for all the ancestors of $G$ as well up to the root of. 
 
 Furthermore, this recomputation might not be parallelizable with any other access. Since the interval of the root is recomputed as well, any other operation, whether read, write or structural modification, has to wait until the recomputation of the root is complete. 
-% This is done in order to prevent incorrect dominator identification due to improper intervals.
-To prevent concurrent accesses from interfering with the recomputation, a structural modification is performed by acquiring a write lock on the root of a hierarchy. This blocks all other accesses until the structural modification and the interval recomputation is complete. 
+A structural modification is performed under a write lock on the root of a hierarchy to prevent concurrent accesses from interfering with the recomputation. This blocks all other accesses until the structural modification and the interval recomputation is complete. 
 
 % In dynamic hierarchies with structural modifications can lead to a significant performance penalty due to the lack of parallelism in the relabelling. 
 
@@ -256,39 +255,39 @@ While DomLock addresses requirement \Rb, false subsumptions and the lack of supp
 
 
 \subsection{Multi Interval DomLock (MID)}
-Multi Interval DomLock \cite{anjuMID} is a successor to DomLock that uses a pair of intervals per vertex to identify the immediate dominator. In addition to a DomLock interval, MID maintains another interval computed by a reverse post-order traversal of the hierarchy, called the \emph{"DFS-on-image"}. Figure \ref{fig:MID_example_locked} shows the MID intervals for a hierarchy. 
+Multi Interval DomLock \cite{anjuMID} is a successor to DomLock that uses a pair of intervals per vertex to identify the immediate dominator. In addition to a DomLock interval, MID maintains another interval computed by a reverse post-order traversal of the hierarchy, called the \emph{"DFS-on-image"}. \cref{fig:MID_example_locked} shows the MID intervals for a hierarchy. 
 
-\subsubsection{Preprocessing and Metadata}
+\subsubsection{Preprocessing and metadata}
 
 A vertex $v$ is labelled with two intervals: the $\mathcal{D}$ interval ($\mathit{ID}_v = [\mathit{lD}_v, \mathit{rD}_v]$) and the $\mathcal{M}$ interval ($\mathit{IM} = [\mathit{lM}_v, \mathit{rM}_v]$). The only difference between the two intervals is the order of traversal used to compute them. $\mathcal{D}$ intervals being post-order and $\mathcal{M}$ intervals being reverse post-order. Leaves of the hierarchy are labelled with unit $\mathcal{D}$ and $\mathcal{M}$ intervals. 
 % \begin{figure}[h]
 %     \centering
 %     \captionsetup{justification=centering}
 %     \includegraphics[width=0.5\textwidth]{figures/MID_example.png}
-%     \caption{Hierarchy labelled with a pair of intervals: DomLock (top) and MID (bottom)}
+%     \caption{hierarchy labelled with a pair of intervals: DomLock (top) and MID (bottom)}
 %     \label{fig:MID_example}
 % \end{figure}
 
-For example, in Figure \ref{fig:MID_example_locked}, vertex $H$ is labelled with $\mathcal{M}$ interval $[2,2]$ in addition to its $\mathcal{D}$ interval $[3,3]$ since it is the second vertex in the reverse post-order traversal. Like DomLock, the interval of an internal vertex is computed using its children's intervals. For both $\mathcal{D}$ and $\mathcal{M}$ intervals of a vertex, the $l$ value of an internal vertex $v$ is the minimum of the $l$ values of the respective interval of its children and the $r$ value of an internal vertex $v$ is the maximum of the $r$ values of the respective interval of its children.
+For example, in \cref{fig:MID_example_locked}, vertex $H$ is labelled with $\mathcal{M}$ interval $[2,2]$ in addition to its $\mathcal{D}$ interval $[3,3]$ since it is the second vertex in the reverse post-order traversal. Like DomLock, the interval of an internal vertex is computed using its children's intervals. For both $\mathcal{D}$ and $\mathcal{M}$ intervals of a vertex, the $l$ value of an internal vertex $v$ is the minimum of the $l$ values of the respective interval of its children and the $r$ value of an internal vertex $v$ is the maximum of the $r$ values of the respective interval of its children.
 
-For example, in Figure \ref{fig:MID_example_locked}, vertex $G$ has three children $H$, $I$ and $J$. The $\mathcal{D}$ and $\mathcal{M}$ intervals of $G$ are $[3,4]$ and $[1,2]$ respectively, since the minimum $l$ values of its children are 3 and 1 and the maximum $r$ values of its children are 4 and 2 respectively.
+For example, in \cref{fig:MID_example_locked}, vertex $G$ has three children $H$, $I$ and $J$. The $\mathcal{D}$ and $\mathcal{M}$ intervals of $G$ are $[3,4]$ and $[1,2]$ respectively, since the minimum $l$ values of its children are 3 and 1 and the maximum $r$ values of its children are 4 and 2 respectively.
 
 Intervals of a vertex $u$ subsume ($\prec$) overlapping intervals of all descendants of $u$. A vertex $u$ is a dominator of another vertex $v$ if both $\mathcal{D}$ and $\mathcal{M}$ intervals of $u$ subsume the respective intervals of $v$.
 Subsumption is defined as follows:
 
-\begin{equation}
+\begin{equation*}
     \begin{split}
         & u \text{ is a dominator of } v \iff ID_u \prec ID_v \land IM_u \prec IM_v
         \\ & \iff \mathit{lD}_v \leq \mathit{lD}_u \land \mathit{rD}_v \geq \mathit{rD}_u \land \mathit{lM}_v \leq \mathit{lM}_u \land \mathit{rM}_v \geq \mathit{rM}_u
     \end{split}
-\end{equation}
+\end{equation*}
 
-For example, in Figure \ref{fig:MID_example_locked}, $G$ is a dominator of $F$, $H$, $I$ and $J$ since both $\mathcal{D}$ and $\mathcal{M}$ intervals of $G$ subsume the respective $\mathcal{D}$ and $\mathcal{M}$ intervals of $F$, $H$, $I$ and $J$.
+For example, in \cref{fig:MID_example_locked}, $G$ is a dominator of $F$, $H$, $I$ and $J$ since both $\mathcal{D}$ and $\mathcal{M}$ intervals of $G$ subsume the respective $\mathcal{D}$ and $\mathcal{M}$ intervals of $F$, $H$, $I$ and $J$.
 
-\subsubsection{Lock Acquisition and Conflicts}
+\subsubsection{Lock acquisition and conflicts}
 In order to identify the lock grain, MID uses the $\mathcal{D}$ and $\mathcal{M}$ intervals of the targets of a lock request. The immediate dominator is chosen as the lock guard. The immediate dominator, with MID, is the deepest vertex that subsumes the $\mathcal{D}$ and $\mathcal{M}$ intervals of the lock targets. Like DomLock, finding the immediate dominator involves a depth-first search from the root of the hierarchy.
 
-For example, in Figure \ref{fig:MID_example_locked}, suppose a thread wants to acquire a lock on vertices $H$ and $J$ with $\mathcal{D}$ intervals $[3,3]$ and $[4,4]$ and $\mathcal{M}$ intervals $[2,2]$ and $[3,3]$ respectively. The lock guard is a vertex with $\mathcal{D}$ interval $[3,4]$ and $\mathcal{M}$ interval $[1,2]$. A depth-first search identifies $G$ as the lock guard for this request. 
+For example, in \cref{fig:MID_example_locked}, suppose a thread wants to acquire a lock on vertices $H$ and $J$ with $\mathcal{D}$ intervals $[3,3]$ and $[4,4]$ and $\mathcal{M}$ intervals $[2,2]$ and $[3,3]$ respectively. The lock guard is a vertex with $\mathcal{D}$ interval $[3,4]$ and $\mathcal{M}$ interval $[1,2]$. A depth-first search identifies $G$ as the lock guard for this request. 
 
 % The two pairs of intervals are used in an attempt to reduce \emph{false subsumptions} where a vertex subsumes its siblings. When testing subsumption in MID, the two intervals are tested for overlap. A vertex $v$ with intervals $[\mathit{lD}_{v1}, r_{v1}]$ and $[l_{v2}, r_{v2}]$, subsumes another vertex $u$ with intervals $[l_{u1}, r_{u1} ]$ and $[l_{u2}, r_{u2}]$ iff $r_{u1} \land l_{u1} \leq r_{v1} \land l_{v2} \leq r_{u2} \land l_{u2} \leq r_{v2}$.
 
@@ -305,11 +304,11 @@ The property of subsumption is used to identify the lock grain of a guard in MID
 This is done to reduce the number of false subsumptions. However, MID still suffers from false subsumptions.
 
 
-For example in Figure \ref{fig:MID_example_locked}, $G$ subsumes $F$, $H$, $I$ and $J$ since both intervals of $G$ overlap with the respective intervals of $F$, $H$, $I$ and $J$. $G$ subsumes $F$ but $F$ is not a descendant of $G$. A thread that wishes to lock $F$ when $G$ is locked will be blocked due to $F$ and $G$ being included in the same grain even though, topologically, they are not. Like DomLock, MID also suffers from poor performance due to spurious conflicts.
+For example in \cref{fig:MID_example_locked}, $G$ subsumes $F$, $H$, $I$ and $J$ since both intervals of $G$ overlap with the respective intervals of $F$, $H$, $I$ and $J$. $G$ subsumes $F$ but $F$ is not a descendant of $G$. A thread that wishes to lock $F$ when $G$ is locked will be blocked due to $F$ and $G$ being included in the same grain even though, topologically, they are not. Like DomLock, MID also suffers from poor performance due to spurious conflicts.
 
 Grain conflicts are identified by testing the $\mathcal{D}$ and $\mathcal{M}$ intervals of the lock guards for overlap. The grains of two lock guards are disjoint only if both $\mathcal{D}$ and $\mathcal{M}$ intervals are disjoint. Two disjoint grains can be locked concurrently. 
 
-\subsubsection{Metadata Maintenance}
+\subsubsection{Metadata maintenance}
 
 MID encounters double the penalty for recomputing vertex labels in dynamic hierarchies when a structural modification occurs. Since two intervals are computed per vertex, a post-order and a reverse post-order traversal are required to recompute them when a structural modification occurs. In some instances, the intervals of all vertices are recomputed, which is extremely expensive for large hierarchies.
 
@@ -322,19 +321,19 @@ MID encounters double the penalty for recomputing vertex labels in dynamic hiera
     
 \end{figure}
 
-For example, when vertex $K$ is inserted as a child of $G$ as shown in Figure \ref{fig:MID_example_SM}, at least one interval for every vertex is recomputed. These intervals are then propagated to the root of the hierarchy. Compared to DomLock, MID relabels more vertices for the same structural modification. 
+For example, when vertex $K$ is inserted as a child of $G$ as shown in \cref{fig:MID_example_SM}, at least one interval for every vertex is recomputed. These intervals are then propagated to the root of the hierarchy. Compared to DomLock, MID relabels more vertices for the same structural modification. 
 
 
-Like DomLock, to prevent concurrent reads from interfering with the recomputation a structural modification is performed by acquiring a write lock on the root of the hierarchy.
+Like DomLock, a structural modification is performed under a write lock on the root of the hierarchy to prevent concurrent reads from interfering with the recomputation.
 
 % the hierarchy is guarded by a mutex until the recomputation is complete.
 
 MID tries to reduce false subsumptions w.r.t to DomLock but does not eliminate them completely. The performance penalty for recomputation in dynamic hierarchies is significantly higher in MID than in DomLock. As such, MID fulfils requirement \Rb but incurs even severe penalties, compared to DomLock, against requirements \Rc and \Rd.
 
-\subsection{Flexible granularity Locking (FlexiGran)}
+\subsection{Flexible granularity locking (FlexiGran)}
 
 FlexiGran \cite{FlexiGran2024} aims to enable both MGL via DomLock and fine-grain locks to co-exist on the same hierarchy. 
-% DomLock is used as the MGL locking technique in FlexiGran and the fixed-grain locks are fine-grain locks i.e. every vertex is its own guard. 
+
 FlexiGran uses the DomLock intervals as vertex labels and uses vertex depth to determine ancestor-descendent relationships between identical intervals.
 
 \begin{figure}
@@ -345,19 +344,18 @@ FlexiGran uses the DomLock intervals as vertex labels and uses vertex depth to d
     \label{fig:flexigran_example_locked}
 \end{figure}
 
-\subsubsection{Preprocessing and Metadata}
+\subsubsection{Preprocessing and metadata}
 
-In FlexiGran, a post-order traversal is performed to compute the labels of vertices. Like DomLock, the leaves of the hierarchy are labelled with unit intervals, and internal vertices are labelled with intervals computed from their children's intervals. In addition to these intervals, FlexiGran also computes the depth of each vertex in the hierarchy. The depth of a vertex is the length of the shortest-longest path from the root to the vertex. Figure \ref{fig:flexigran_example_locked} shows a hierarchy's intervals and vertex depths labelled with FlexiGran.
+In FlexiGran, a post-order traversal is performed to compute the labels of vertices. Like DomLock, the leaves of the hierarchy are labelled with unit intervals, and internal vertices are labelled with intervals computed from their children's intervals. In addition to these intervals, FlexiGran computes each vertex's depth in the hierarchy. The depth of a vertex is the length of the shortest-longest path from the root to the vertex. \cref{fig:flexigran_example_locked} shows a hierarchy's intervals and vertex depths labelled with FlexiGran.
 
-This shortest-longest path is helpful for depth determination in the presence of connected components like cycles. In a cycle, the path is recursive, and based on the computation method, the longest path can be infinite. The shortest-longest path limits this recursion to the length of a path from the root to a vertex, which contains the target vertex at most twice, as is the case with cycles. 
+This shortest-longest path is helpful for depth determination in the presence of connected components like cycles. In a cycle, the path is recursive, and based on the computation method, the longest path can be infinite. The shortest-longest path limits this recursion to the length of a path from the root to a vertex, which contains the target vertex at most twice, as with cycles. 
 
-\subsubsection{Lock Acquisition and Conflicts}
+\subsubsection{Lock acquisition and conflicts}
 
-% FlexiGran uses vertex depth in addition to intervals to determine if two vertices might have an ancestor-descendant relationship between them. 
 If a thread requests an MGL lock on a vertex via Flexigran, then a lock is acquired via the DomLock protocol by performing a depth-first search to find the immediate dominator of the target vertex.
 If a thread requests a fine-grain lock, then a read/write lock is directly requested on the target. 
 
-Since fine-grain and MGL locks can exist in flexigran, testing lock conflicts involves multiple steps. Table \ref{tab:flexigran_locks} shows the compatibility matrix for FlexiGran locks. \textbf{F} and \textbf{H} indicate the kind of lock acquired, fine-grain lock and multi-granularity lock, respectively. \textbf{R} and \textbf{W} indicate the lock mode. So, \textbf{FR} is a fine-grain read lock.
+Since fine-grain and MGL locks can exist in FlexiGran, testing lock conflicts involves multiple steps. \cref{tab:flexigran_locks} shows the compatibility matrix for FlexiGran locks. \textbf{F} and \textbf{H} indicate the kind of lock acquired, fine-grain lock and multi-granularity lock, respectively. \textbf{R} and \textbf{W} indicate the lock mode. So, \textbf{FR} is a fine-grain read lock.
 
 When checking if two MGL locks are compatible, the intervals of their guards are tested for overlap. Disjoint intervals indicate that the two locks are DomLock compatible. When checking two fine-grain locks for conflict, the lock guards for the lock requests are compared. If two fine-grain lock requests are on the same vertex, they conflict if at least one of the requests is for a write lock.
 
@@ -381,9 +379,9 @@ When checking if two MGL locks are compatible, the intervals of their guards are
 
 To test the compatibility of an MGL lock with a fine-grain lock, it is necessary to perform a reachability check between the guards of the MGL lock and the fine-grain lock. To do so, a search is initiated from the guard of the MGL lock, and if the fine-grain lock guard is reachable from the MGL lock guard, then the two locks are incompatible since they lie in the same MGL grain. 
 
-For example, in Figure \ref{fig:flexigran_example_locked}, a hierarchical lock is acquired on $G$. This lock guards vertices $H$, $I$ and $J$. If a fine-grain lock is requested on $F$, it would be compatible with the hierarchical lock on $G$ since there is no path from $G$ to $F$ or vice-versa. Unlike DomLock and MID, A FlexiGran lock on $G$ does not subsume $F$ as $F$ is not a descendant of $G$ since their depths are the same.
+For example, in \cref{fig:flexigran_example_locked}, a hierarchical lock is acquired on $G$—this lock guards vertices $H$, $I$ and $J$. If a fine-grain lock is requested on $F$, it would be compatible with the hierarchical lock on $G$ since there is no path from $G$ to $F$ or vice-versa. Unlike DomLock and MID, A FlexiGran lock on $G$ does not subsume $F$ as $F$ is not a descendant of $G$ since their depths are the same.
 
-\subsubsection{Metadata Maintenance}
+\subsubsection{Metadata maintenance}
 
 Like DomLock, structural modifications in FlexiGran require recomputation of the intervals of the vertices. A single post-order traversal is enough to recompute the intervals and depths of vertices. 
 
@@ -429,29 +427,28 @@ MGL based only on paths, like Intention Lock, fulfils requirement \Rb but incurs
         CALock & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{green!25} Y \\
         
     \end{tabular}
-    \caption{Comparison of MGL techniques against requirements}
-    \label{tab:tradeoffs}
+    \caption{Comparison of MGL techniques against requirements}\label{tab:tradeoffs}
 \end{table}
 
 MGL, using labels based on a vertex order such as DomLock, MID and FlexiGran, fulfils requirement \Rb and incurs a penalty due to false subsumptions. In addition, due to the metadata required to implement the locking protocol, these techniques incur a performance penalty against requirement \Rd when structural modifications occur. 
 
 
-Figure \ref{fig: tradeoffs} and Table \ref{tab: tradeoffs} shows the tradeoffs in the different MGL techniques. Intention locks offer the smallest lock grains at the cost of lock conflict detection. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains than others but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to a balanced MGL protocol.
+\cref{fig:tradeoffs} and \cref{tab:tradeoffs} show the tradeoffs in the different MGL techniques. Intention locks offer the smallest lock grains at the cost of lock conflict detection. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains than others but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to a balanced MGL protocol.
 
 
 
 \section{Improving the efficiency of MGL techniques}
 
-The locking techniques discussed in chapter \ref{chap:relatedwork} are based on the graph's topology or the workload's nature. Most MGL techniques enforce an ordering of vertices, either via reachability, thereby utilizing paths to vertices, or by a static ordering that ignores the topology of the hierarchy.
+The locking techniques discussed in this chapter are based on the graph's topology or the workload's nature. Most MGL techniques enforce an ordering of vertices, either via reachability, thereby utilizing paths to vertices, or by a static ordering that ignores the topology of the hierarchy.
 
 \subsection{Path based techniques}
-Path-based techniques like lock coupling \cite{DBLP:journals/acta/BayerS77}  and intention locks \cite{gray1975granularity} utilize paths from the root of a graph to the lock target. Lock coupling uses a pair of locks acquired one after the other on a path to the vertex to prevent concurrent access. In comparison, intention locking places a set of locks on the path to the vertex to prevent concurrent access. These techniques are efficient for trees and tree-like structures where the path to a vertex from the root is unique. However, generalizing these techniques to graphs or even hierarchies is not appropriate. As we will see in Chapter \ref{chap:evaluation}, the performance of Intention locks degrades significantly when locking over hierarchies.
+Path-based techniques like lock coupling \cite{DBLP:journals/acta/BayerS77}  and intention locks \cite{gray1975granularity} utilize paths from the root of a graph to the lock target. Lock coupling uses a pair of locks acquired one after the other on a path to the vertex to prevent concurrent access. In comparison, intention locking places a set of locks on the path to the vertex to prevent concurrent access. These techniques are efficient for trees and tree-like structures where the path to a vertex from the root is unique. However, generalizing these techniques to graphs or even hierarchies is not appropriate. As we will see in \cref{chap:evaluation}, the performance of Intention locks degrades significantly when locking over hierarchies.
 
 \subsection{Label based techniques}
-Other MGL techniques use labelling strategies that identify an ordering of vertices, which is later used by the locking protocol to identify lock grains. Techniques such as DomLock, MID and FlexiGran fall into this category. These techniques can efficiently identify the lock guard and grain by using predefined ordering, such as a post-order. However, the topological detail of the graph is lost.  
+Other MGL techniques use labelling strategies that identify an ordering of vertices, which is later used by the locking protocol to identify lock grains. Techniques such as DomLock, MID and FlexiGran fall into this category. These techniques can efficiently identify the lock guard and grain using predefined ordering, such as a post-order. However, the topological detail of the graph is lost.  
 
 
-\subsection{Unified Path and Label based techniques}
+\subsection{Unified path and label based techniques}
 Unified techniques for labelling are explored in literature in the domain of metadata management for large-scale, efficient searching applications. The Dewey Decimal System \cite{DBLP:journals/jd/Sweeney83} is the earliest example of a path-based labelling technique used to identify elements of a hierarchy based on their subclassification. Other path-based techniques use similar representations of paths. 
 
 A path-based labelling technique that preserves the topological ordering of vertices in the labels and facilitates efficient locking would be an ideal solution. However, the additional metadata required to implement this unified technique should not be prohibitively expensive. DomLock and its successors sacrifice labelling performance for locking performance to an extent that makes them unusable for hierarchies that undergo structural modifications. CALock labelling scheme balances maintaining both topological information of the hierarchy while efficiently locking and relabelling. 
@@ -459,4 +456,4 @@ A path-based labelling technique that preserves the topological ordering of vert
 \section{CALock: A topological multi-granularity locking technique}
 
 We propose a new labelling scheme, based on path properties, that supports multi-granularity locking. {\em Common-Ancestor lock} ({\em CALock}) is based on a labelling that efficiently computes the closest common ancestor of a set of vertices in a rooted directed graph.
-By choosing the closest guarding common ancestor of a set of lock targets as their guard, CALock minimizes grain size. By avoiding a fixed ordering of vertices when using paths, CALock circumvents expensive relabelling while providing the same locking guarantees as other MGL techniques. The label of a vertex in the graph is a set of its guarding ancestors, computed recursively via breadth-first traversal, which we discuss in chapter \ref{chap:calock}.
+By choosing the closest guarding common ancestor of a set of lock targets as their guard, CALock minimizes grain size. By avoiding a fixed ordering of vertices when using paths, CALock circumvents expensive relabelling while providing the same locking guarantees as other MGL techniques. The label of a vertex in the graph is a set of its guarding ancestors, computed recursively via breadth-first traversal, which we discuss in \cref{chap:calock}.

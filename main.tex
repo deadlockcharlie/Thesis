@@ -45,10 +45,12 @@
 \usepackage{booktabs}
 \usepackage{wrapfig}
 \usepackage{tabularx}
-
+\usepackage{hyperref}
+\usepackage[capitalise, noabbrev]{cleveref}
 
 \usepackage{minitoc}
-
+\counterwithout{equation}{chapter} % remove the chapter number
+\counterwithout{equation}{section} % remove the chapter number
 
 
 \lstset{language=C++,
@@ -73,6 +75,9 @@
 % **************************************************
 % Document CONTENT
 % **************************************************
+
+
+
 \begin{document}
 
 % uncomment the following command to fill up pages with
@@ -85,8 +90,8 @@
 % --------------------------
 
 % > set short label names for floating environments figure and table
-\renewcaptionname{english}{\figurename}{Fig.}
-\renewcaptionname{english}{\tablename}{Tab.}
+% \renewcaptionname{english}{\figurename}{Fig.}
+% \renewcaptionname{english}{\tablename}{Tab.}
 
 % > rename the title of the LOL, i.e. list of listings (default is "Listings")
 \renewcommand*{\lstlistlistingname}{List of Listings}
@@ -145,41 +150,17 @@
 \cleardoublepage
 
 
-%% Uncomment the following lines using the \part command
-%% to add part sections
-\input{content/introduction}   % INCLUDE: introduction
+\input{content/introduction}
 
-% \part{Background}
-% \label{part:background}
 \import{content/background}{background}
 
-% \part{Related Work}
-% \label{part:related}
 \import{content/relatedwork}{related}
 
-% \import{content/motivation}{motivation}
-
-% \part{Formal Fundamentals}
-% \label{part:theory}
-\import{content/theory}{theory}
+\import{content/CALock}{CALock}
 
 
-% % \part{CALock}
-% % \label{part:calock}
-\import{content/calock}{calock}
+\import{content/ImpAndEval}{ImpAndEval}
 
-\import{content/properties}{properties}
-
-% % \part{Implementation}
-% % \label{part:implementation}
-\import{content/implementation}{implementation}
-
-% % \part{Experimental Evaluation}
-% % \label{part:evaluation}
-\import{content/evaluation}{evaluation}
-
-% % \part{Conclusion}
-% % \label{part:conclusion}
 \input{content/conclusion} 
 
 % --------------------------

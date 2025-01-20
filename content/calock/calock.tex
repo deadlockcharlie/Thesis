@@ -1,12 +1,324 @@
 
-\chapter{CALock: Multi-Granularity locking and conflict detection} \label{chap:calock}
 
+\chapter{CALock: Topological multi-granularity locking} \label{chap:CALock}
 \minitoc
 
-In Chapter \ref{chap:theory}, we discussed the theory behind CALock labelling. We introduced \lstinline|BFLabel()|, a function to preprocess a hierarchy. Each vertex in a hierarchy is assigned a label during preprocessing. These labels are used to identify a grain for a lock request for a set of lock targets. 
+This chapter presents the mathematical foundation, design, and properties of CALock labelling and locking mechanism. We begin by introducing the theoretical underpinnings of CALock, including the definitions of graphs, paths, and vertex relationships. We then discuss the relationships between paths and how they can be used via a labelling scheme to determine a locking grain. We then present the design of a locking and conflict detection protocol that uses said labelling scheme to determine the locking grain for a lock request. Next, We discuss how the labelling scheme handles structural modification operations. Finally, we present a discussion on the formal properties of CALock and its comparison with other state-of-the-art locking mechanisms viz-a-viz time complexity.
 
 
-Recall from Chapter \ref{chap:background}, a standard MGL lock protocol involves the following steps:
+\section{Topological labelling} \label{chap:theory}
+
+CALock uses the topological information of a graph to determine the locking grain for a lock request. It does so by using the paths to a vertex from the root of the hierarchy and finding the set of common vertices on all these paths. This path-based grain identification can become expensive for systems with high lock throughput. To avoid grain computation becoming a bottleneck, we develop a labelling scheme that efficiently and effectively allows threads to determine a locking grain for their lock requests without traversing the hierarchy. CALock labelling is based on the concept of common ancestors introduced by \citet{fischer2010new}. Our labelling scheme extends their work on DAGs to general rooted graphs, which may contain connected components like cycles. 
+
+In this chapter, we present the formal definitions and theoretical underpinnings of the labelling scheme of CALock.
+We introduce the basic concepts of graphs, paths, and vertex relationships.
+Next, we discuss the bounds of commonality between vertices in a graph and how they can be used to determine a locking grain. We formulate the locking grain problem mathematically and prove its correctness. Finally, we present the CALock labelling function and discuss its implementation over different use cases.
+
+\subsection{Graphs, paths and vertex relationships}
+
+
+Let $G=(V, E)$ be a directed graph. $V$ is its set of vertices, connected by directed edges in the set $E \subseteq V \times V$. A rooted graph has a designated vertex $r \in V$ such that all other vertices are reachable from $r$.
+
+A pair of vertices $(u, v)$ can be connected by a sequence of edges, called the path between $u$ and $v$, noted $p$. The set of vertices of $p$ is noted $\mathcal{V}(p)$. The length $l_p$ of this path is the size of $\mathcal{V}(p)$ i.e. $l_p = \lvert \mathcal{V}(p)\rvert$.
+
+%\textcolor{red}{For two paths $p_1$ and $p_2$, if $l_{p_1} \geq l_{p_2}$, then we say $p_1 \geq p_2$ and vice a versa.}
+
+In the general case, several such paths may exist between a pair of vertices.
+The set of paths between $u$ and $v$ is noted $\mathcal{P}_{(u,v)}$.
+The depth $\delta(v)$ of a vertex $v$ is the length of the shortest path in the set $\mathcal{P}_{(r,v)}$.
+% \subsection{Ancestors and Descendants}
+\begin{definition}[\textbf{Ancestor and descendent}]
+	An ancestor of a vertex $u$ is a vertex $v \in G$ that lies on a path from $r$ to $u$. The vertex $u$ is then called the descendant of vertex $v$.
+	The relation $A(u)$ gives the set of ancestors.
+	\begin{equation*}
+		A(u)=\{v\in V|\exists p\in \mathcal{P}_{(r,u)}, v \in p\}
+	\end{equation*}
+\end{definition}
+% \subsection{Guarding Ancestors}
+% We define the guarding ancestor(s) of a vertex.
+
+\begin{definition}[\textbf{Guarding ancestor}]
+	A guarding ancestor of a vertex $u$ is a vertex $v \in G$ that lies on all paths from $r$ to $u$.
+	The set of guarding ancestors of $u$ is noted $\mathit{GA}(u)$.
+	This set is given by:
+	\begin{equation*}
+		\mathit{GA}(u) =	\{v\in A(u)|\forall p\in \mathcal{P}_{(r,u)}\Rightarrow v\in p\}
+	\end{equation*}
+\end{definition}
+
+\begin{definition}[\textbf{Lowest guarding ancestor}]
+	The lowest guarding ancestor $LGA(u)$ of a vertex $u$ is the guarding ancestor of $u$ with the maximum depth.
+\end{definition}
+
+\begin{definition}[\textbf{LGA-Tree}]
+	The LGA-tree $T_G$ of $G$  is an auxiliary tree that has the same vertices as $V$ and whose edges are defined such that the parent vertex of $v \neq r$ is the LGA of $v$ in $G$.
+\end{definition}
+
+\begin{table}[ht]
+    \centering
+	\captionsetup{justification=centering}
+	\begin{tabular}{c l}
+		\textbf{Term} & \textbf{Meaning} \\
+		\hline 
+		$G$ & Graph \\
+		$V$ & Vertices of $G$\\
+		$E$ & Edges of $G$\\
+		$r$ & Root of $G$\\
+		$u, v, w$& Vertices \\
+		$Q$ & Set of vertices\\
+		$\delta(v)$ & Depth of vertex $v$\\
+		$GA(u)$ & Guarding ancestors of $u$\\
+		$CA(u,v)$ & Common ancestors of $u$ and $v$\\
+		$LGA(u)$ & Lowest guarding ancestor of $u$\\
+		$T_G$ & LGA tree for a graph $G$\\
+		$LCA(u,v)$ & Lowest common ancestor of $u$ and $v$\\
+		$LGCA(Q)$ & Lowest guarding common ancestor of $Q$\\
+		$L_u$ & Label of vertex $u$\\
+	\end{tabular}\\
+	\caption{Terms used in the definitions}
+	\label{definitionsLegend}
+\end{table}
+
+\begin{definition}[\textbf{Common ancestor}] \label{def:commonAncestor}
+	A common ancestor (CA) of two vertices $u$ and $v$ is a vertex $c$ that is an ancestor of both $u$ and $v$.
+	The set of common ancestors is given by:
+	\begin{equation*}
+		\mathit{CA}(u,v) =	\{c \in V | c \in A(u) , c \in A(v)\}
+	\end{equation*}
+\end{definition}
+
+\begin{definition}[\textbf{Lowest common ancestor}] \label{def:LowestCommonAncestor}
+	The lowest common ancestor $LCA(u,v)$ of two vertices $u$ and $v$ is the common ancestor of $u$ and $v$ with the maximum depth.
+\end{definition}
+
+
+\subsection{Lowest Guarding Common Ancestor} \label{LGCADefinitions}
+
+The Lowest Guarding Common Ancestor $LGCA(Q)$ of a set of vertices $Q$ is the deepest vertex that is both a guarding ancestor and a common ancestor of all vertices in $Q$. \citet{fischer2010new} derive the following relationships between the LGA and the LGCA of vertices in a rooted DAG.
+
+
+\begin{lemma}\label{lscaislca}
+	Let $G$ be a DAG, rooted at r, and $T_G$ be its corresponding LGA tree. Further, let v, w $\in$ V be two arbitrary vertices in G. Then $LGCA_G(v,w) = LCA_{T_G}(v,w)$
+\end{lemma}
+
+
+
+\begin{lemma}\label{lgaislgcaofparents}
+		For a vertex $v \in G: v \neq r , LGA_G(v) = LGCA_G(\mathit{parents}_G(v))$
+\end{lemma}
+
+
+\begin{definition}\label{associativelgca}
+		$LGCA_G (w_1, ... ,w_k) = LGCA_G (w_1, LGCA_G (w_2, ... ,w_k))$
+\end{definition}
+
+\begin{definition}\label{associativelca}
+	$LCA_{T_G} (u_1, u_2,..., u_n) = LCA_{T_G} (u_1, LCA_{T_G} (u_2,...,u_n))$
+\end{definition}
+
+\subsection{Characteristic sets: sets of guarding ancestors}
+
+We use the LGA-tree $T_G$ to label the vertices of a rooted DAG \emph{G}.
+A vertex $u$ is labelled with an ordered set containing the vertices on the path from the root of $T_G$ to $u$. Since $T_G$ is a tree, this path is unique, and so is the label $L_u$. \cref{fig:LGATree} shows a rooted graph and corresponding LGA tree.
+
+\begin{figure}
+	\centering
+	\captionsetup{justification=centering}
+	\includegraphics[width=\textwidth]{figures/LGATree.png}
+	\caption{A rooted graph with CALock labels and its LGA corresponding tree} \label{fig:LGATree}
+\end{figure}
+
+Computing this partial ordering of vertices in a graph is expensive since it requires examining all paths between the root and a vertex for all vertices in the graph. To compute the label of a vertex $u \in G$ without needing to compute the LGA-tree $T_G$, we use \cref{lscaislca} to define a recursive function. 
+The $LGCA$ of a set of vertices is the last vertex in an ordered intersection of the characteristic sets of those vertices. We have the following theorem:
+
+\begin{theorem} \label{proofOfDeepness}
+	$\mathit{LGCA}_G(v,w) \text{ is the vertex of the maximum depth in } L_v\cap L_w$
+\end{theorem}
+
+\begin{proof}
+	 Let $l = LGCA_G(v,w)$ be the LGCA of two vertices $\{v, w\}$; we must show that $l$ is the deepest vertex in  $L_v \cap L_w$.
+%	 Lowest common ancestor of in the LGA tree $T_G$. By \cref{lscaislca}, we can say that $l = LGCA_G(v,w)$.
+
+	Assume that a vertex $l' \neq l$ lies on all paths from $l$ to $v$ and $l$ to $w$ in $G$.
+
+	Since $l'$ lies on the paths in the sets $\mathcal{P}_{(l,v)}$ and $\mathcal{P}_{(l,w)}$, inductively, $l'$ also lies on all the paths from the root ($r$) of the graph to the vertices $v$ and $w$.
+	If  $l'$ lies on these paths, it is a guarding ancestor of $v$ and $w$ and should be present in their characteristic sets.
+	
+	The following holds true: $(l' \in L_v) \land (l' \in L_w) \equiv l' \in L_v \cap L_w$.
+
+	Since $l'$ lies on the paths to $v$ and $w$ after $l$, by the definition of depth $\delta(v)$ of a vertex,	$\delta(l') > \delta(l)$.
+
+	Now we have two conclusions, $l' \in L_v \cap L_w$ and $\delta(l') > \delta(l)$.
+
+	Since $l'$ is deeper than $l$, it should be the deepest member of  $ L_v \cap L_w$.
+	This means $l'$ is the LGCA of $v$ and $w$.
+	But this contradicts our original assumption that $l$ is the LGCA of $v$ and $w$.
+	This means our assumptions on $l'$ contradict the definition of LGCA. Either $l'=l$ or $l'$ is the LGCA and not $l$.
+	% So, the definition $l = LGCA_G(v,w)$ and $l$ is the deepest element in the set $L_v \cap L_w$ is not true for $l'$.
+\end{proof}
+
+
+\subsection{CALock labelling scheme} \label{sec:labellingScheme}
+CALock uses the characteristic set $L_u$, a set of the guarding ancestors, as the label for a vertex $u$.  
+In the implementation, a characteristic set is computed via a recursive relation. 
+This recursive relation is defined using the definitions and lemmas from \cref{LGCADefinitions}. 
+In this section, we incrementally derive the relation and show its robustness against different topological extremes like cycles and connected components.  
+% To ease the implementation, we derive a recursive function from the definitions in \cref{LGCADefinitions} that can be used to compute these labels. 
+An implementation of this function is shown in \cref{labelAssignment}.
+
+
+\subsubsection{Labelling function} \label{sec:recursivelabellingfunction}
+
+We combine \cref{proofOfDeepness} with the definitions and lemmas from \cref{LGCADefinitions} to derive a recursive function that we use to label the vertices in a graph. To this end,
+\cref{lgaislgcaofparents} can be rewritten using Definition \cref{associativelgca} as follows:
+\begin{equation}\label{eqn1}
+\begin{split}
+    &{LGA_G(v) = LGCA_G (p_1, LGCA_G (p_2,...,p_k))}
+    \\ &\text{where } p_1, p_2, ... p_k \text{ are the parents of } v
+\end{split}
+\end{equation}
+
+% Definition \cref{associativelca} can be rewritten using \cref{proofOfDeepness} as follows:
+% \begin{equation}\label{eqn2}
+% \begin{split}
+%    &LGA_G (u_1, .... , u_n)  = LGCA_G(u_1, ... , u_n)
+%    \\ &\text{which is the deepest element in } L_{u_1} \cap ... \cap L_{u_n}
+% \end{split}
+% \end{equation}
+
+Combining equation \cref{eqn1} and \cref{proofOfDeepness}; $LGA_G(v)$ is the deepest vertex in $ L_{p_1} \cap L_{p_2} \cap ... \cap L_{p_k}$ where $p_1, p_2, ... p_k$ are the parents of $v$.
+
+Therefore, the sets of guarding ancestors of the parents of $v$ are enough to compute the lowest guarding ancestor of $v$. 
+We use this property to recursively compute the labels of the vertices in a graph using the following function.
+
+\begin{equation}\label{labellingRecursion}
+	L_v = 
+	\begin{cases}
+		\{v\} & \text{v is the root} \\
+		\{ \cap_{u\in parents(v)} L_u\} \cup \{v\} & \text{otherwise}
+	\end{cases}
+\end{equation}
+
+
+\subsubsection{Labelling and relabelling a rooted graph}
+
+
+
+
+
+
+The recursive labelling function derived in \cref{sec:recursivelabellingfunction} is used to compute the labels of each vertex in a hierarchy. An implementation of this function is shown in \cref{labelAssignment}. Label computation begins from the root and terminates when all paths have been explored. This function is robust to different topological extremes of the graph. \cref{labelAssignment} can be used to label acyclic graphs and graphs with strongly connected components. The following sections discuss the labelling and relabelling of acyclic graphs and strongly connected components. 
+
+\paragraph{Labelling an acyclic graph}
+Labelling starts at the graph's root with the function \inline|AssignLabel(r)|. It uses \cref{labellingRecursion} implemented in lines \ref{labellingRelationImplBegin} - \ref{labellingRelationImplEnd} in \cref{labelAssignment} to assign the labels. The root vertex does not have parents, so the label of a root is the set containing the ID of the root itself (Lines \ref{rootLabellingBegin} - \ref{rootLabellingEnd}). For example, in \cref{fig:calockexample} vertex $A$ has the label $\{A\}$.
+
+\begin{figure}[h]
+	\centering
+	\captionsetup{justification=centering}
+	\includegraphics[width=0.6\textwidth]{figures/CALockExample.png}
+	\caption{CALock labels on a hierarchy}
+	\label{fig:calockexample}
+\end{figure}
+
+Then, the children of the vertex $v$ are explored via a breadth-first traversal over the graph. A child's label is computed using the parents', via \cref{labellingRecursion}. For example, in \cref{fig:calockexample}, the label of vertex $B$ is $\{A, B\}$ since it has only one parent. Vertex $E$ has two parents which have the labels $\{A, B\}$ and $\{A, C\}$ respectively. Their set intersection is $\{A\}$. Using \cref{labellingRecursion}, the label of $E$ is $\{A, E\}$. The graph is explored and labelled until the recursion reaches a fix-point and terminates (line \ref{recursionCheck}). 
+
+This recursion reaches a fix-point in acyclic graphs after exploring all the paths to leaf vertices. By exploring vertices in a depth-first manner, we ensure that the label of a vertex is computed only after the labels of all its parents have been computed to avoid recomputation as much as possible.
+
+
+\begin{algorithm}[h]
+	\caption{Labelling the graph}
+	\begin{algorithmic}[1]
+		\Procedure{AssignLabels}{v}
+		\State $queue$.\Call{push}{v}
+		\While{$queue$.\Call{hasNext}{ }}
+		\State $v\gets queue.$\Call{Next}{ }
+		\State \Call{BFLabelA}{v, queue}
+		\EndWhile
+		\EndProcedure
+		\Statex
+
+		\Procedure{BFLabelA}{v, queue}
+		\State $C\gets$\Call{children}{v}
+		\If{$parents(v) = \emptyset$ } \label{rootLabellingBegin}
+		\State{$v.label\gets\{v\}$}
+		\State $queue.$\Call{push}{ $C$ }
+		\State return
+		\EndIf\label{rootLabellingEnd}
+		\State $P\gets$\Call{parents}{v}\label{labellingRelationImplBegin}
+		\State $tempLabel\gets$\Call{Intersection}{P.$labels$}\label{intersectionStart}
+		\State $tempLabel$.\Call{append}{v} \label{intersectionEnd}
+		\If{$v.label \neq tempLabel$} \label{recursionCheck}
+		\State $v.label\gets tempLabel$
+		\State $queue.$\Call{push}{ $C$ }
+		\EndIf \label{labellingRelationImplEnd}
+		\EndProcedure
+	\end{algorithmic}
+	\label{labelAssignment}
+\end{algorithm}
+
+
+\paragraph{Labelling a strongly connected component}
+A strongly connected component is a maximal sub-graph of a directed graph where every vertex is reachable from every other. 
+In \cref{fig:stronglyConnectedComponent}, the cyan vertices form a strongly connected component.
+
+
+% \cref{proofOfDeepness} assumes that the graph does not contain strongly connected components. 
+Ensuring that a graph does not contain strongly connected components is difficult in real-life applications. 
+One approach to handling strongly connected components is to eliminate them by contracting the vertices in the component to a single vertex \cite{sharir1981strong, tarjan1972depth, cheriyan1996algorithms,walsh2006hub}. By doing so, we treat the strongly connected component as a single vertex in the graph. 
+However, this approach alters the graph semantically, which is undesirable in applications that store data in the graph's vertices. By contracting the vertices, we lose the information stored in the vertices of the strongly connected component, which is unacceptable. 
+With the recursive \cref{labellingRecursion}, we do not need to eliminate strongly connected components to label the vertices of a graph. 
+
+
+\begin{figure}
+	\centering
+	\captionsetup{justification=centering}
+	\includegraphics[width=0.6\textwidth]{figures/CALock_ConnectedComponent.png}
+	\caption{CALock labels for a hierarchy containing strongly connected component (cyan)}
+	\label{fig:stronglyConnectedComponent}
+\end{figure}
+
+Assume that $N \subseteq V$ is a set of vertices of a graph that are strongly connected. Since every vertex in $N$ is reachable from every other vertex in $N$, the path set $\mathcal{P}_{(u,v)}$ for any pair of vertices $u, v\in N$ contains the same vertices and every vertex in N has the same set of guarding ancestors. \inline|BFLabel| recurses over all vertices in $N$ until the paths labels of vertices in $N$ do not change any more (line \ref{recursionCheck}).
+% Therefore, \cref{labellingRecursion} is sufficient to label rooted directed graphs with strongly connected components.
+For example, in \cref{fig:stronglyConnectedComponent}, the vertices $G, H, I, J$ form a strongly connected component. 
+
+\paragraph{Relabelling a graph}
+
+The topology of a graph can change due to \emph{structural modifications}, which add or remove vertices and edges from a graph. 
+Such modifications change the paths that lead to a vertex from the root.
+Since the paths to vertices have changed, the labels of vertices need to be recomputed.
+
+In the same fashion as the initial labelling, the parents of $v$ are used to compute its label and recursively of its descendants. Relabelling terminates when it reaches a fix-point (line \ref{recursionCheck}). 
+Consider the example in \cref{fig:CAstructuralModification}. When a new vertex $K$ is added as a child of G. The label of $K$ is the intersection of the labels of its parents, i.e. $\{A, C, G, K\}$. Since $K$ is a leaf vertex, the recursion terminates. 
+No other vertex in the hierarchy is relabelled. 
+This allows CALock to efficiently handle structural modifications in the hierarchy by eliminating the need for a mutex to relabel the entire hierarchy and parallelize the relabelling process. CALock relabels the hierarchy under the same lock acquired to perform the structural modification.
+
+Unlike the other state-of-the-art techniques, which relabel the graph by performing the same post-order traversal as preprocessing, in CALock, relabelling begins at the vertex affected by the structural modification via \lstinline|AssignLabel(v)| function. 
+Unlike DomLock, MID and FlexiGran, CALock does not relabel the entire hierarchy when a structural modification occurs. 
+It only relabels the affected vertices and their descendants. 
+This is useful for parallelizing structural modifications and reducing the overhead of relabelling the entire hierarchy.
+
+\begin{figure}
+	\centering
+	\captionsetup{justification=centering}
+	\includegraphics[width=0.6\textwidth]{figures/CALock_example_with_SM.png}
+	\caption{CALock labels for a hierarchy with structural modifications.}
+	\label{fig:CAstructuralModification}
+\end{figure}
+
+
+
+
+
+
+
+\section{Multi-Granularity locking and conflict detection} \label{chap:calock}
+
+% \minitoc
+
+In \cref{chap:theory}, we discuss the theory behind CALock labelling and introduce the concept of lowest guarding common ancestors (LGCA) of vertices in a graph. We present \lstinline|BFLabel()|, a function to preprocess a hierarchy. Each vertex in a hierarchy is assigned a label during preprocessing. These labels identify a grain for a lock request for a set of lock targets. 
+
+
+As presented in \cref{chap:background}, a standard MGL lock protocol involves the following steps:
 
 \begin{enumerate}
 	\item Optional preprocessing
@@ -17,39 +329,15 @@ Recall from Chapter \ref{chap:background}, a standard MGL lock protocol involves
 	\item Releasing the lock \label{step:release}
 \end{enumerate}
 
-In this chapter, we will study steps \ref{step:prep}-\ref{step:release} in detail for CALock. We will introduce the lock request schema for CALock as well as a lock pool, which is used to detect conflicts between requests. We will discuss how we avoid typical \emph{time of check to time of use} (TOCTOU) race condition between threads and specific optimizations made to the lock pool for fairness.
-
-% In Chapter \ref{chap:theory}, we discussed the formal theory behind CALock. A recursive function \inline|BFLabel()| was introduced to assign labels to the vertices in the graph. These labels are used to identify the lock grain of a lock request. Labelling is performed as an initialization step and is not required during runtime. Once a hierarchy is labelled, threads can utilize the labels to lock the graph at different granularities. From the locking steps discussed in Chapter \ref{chap:background}, Section \ref{sec:lockAcquisitionProtocol}, we know that a thread wishing to lock a set of vertices must first create a lock request and then check for conflicts with other lock requests. Once the lock request is granted, a thread can proceed to its critical section, following which, it releases the lock.
-
-% In CALock, a lock request contains information derived from the labels of the vertices in the lock request which is used to identify the lock guard. Lock requests are added to a concurrent data structure called a lock pool. This pool is used to detect conflicts between lock requests. After adding a lock request to the pool, a thread checks for conflicts with other lock requests in the pool. If no conflict is detected, the thread proceeds to its critical section. This process is shown in Listing \ref{lockFunction}. The main steps are: 
-
-% \begin{enumerate}
-% 	\item \textbf{Lock grain identification}: A thread uses the labels of the vertices in its lock request to identify the grain it wants to lock. The thread then determines the lock guard associated with this grain and locks it.
-% 	\item \textbf{Lock request creation}: The thread proceeds to create a lock request for the guard and adds it to a lock pool. 
-% 	\item \textbf{Lock conflict detection}: After adding its request, the thread evaluates potential conflicts by comparing its request with other entries in the pool. In CALock, two conditions indicate a lock conflict. If both conditions hold for a pair of lock requests, they are in conflict.
-% 	\item \textbf{Operation execution}: If no conflict is detected, the thread proceeds to execute its operation.
-% 	\item \textbf{Lock release}: After the operation is complete, the thread releases the lock on the grain.
-% \end{enumerate}
-
-% In this chapter, we look at each of these steps in detail with examples and corner cases. We also discuss the implementation of CALock 
-% First, a thread identifies the grain it wishes to lock by using the labels of the vertices in its lock request. This grain is guarded by a lock guard which is to be locked by the thread. 
-
-% Then, the thread proceeds to create a lock request for the guard and adds it to a lock pool. 
-
-% Finally, the thread checks for conflicts with other lock requests in the pool and blocks if a conflict is detected.
-
-\section{Lock request preparation: Vertex labels and LGCA}
-
-After a hierarchy is preprocessed, threads start accessing data on vertices. This data access is a read or a write operation. Often, threads wish to access multiple vertices atomically. Once the set of vertices (lock targets) is identified, the thread accessing them needs to ensure isolation to guarantee correctness. To achieve this, it requests a lock on the \emph{Lowest Guarding Common Ancestor} (LGCA) of the set of lock targets. With CALock, this is done by taking the set intersection of the labels of the lock targets. It follows from Theorem \ref{proofOfDeepness} that the last element in this set intersection is the LGCA of the set of lock targets and is the root of the grain that contains the target vertices. 
-
-For example, in Figure \ref{calockexample}, to lock target vertices H and J, their LGCA is computed using the intersection of their labels, i.e., $\{A, C, H\} \cap \{A, C, G, J\} =  \{A,C\}$ in which is C is the deepest vertex. The thread then proceeds to acquire a lock on C. 
+In this chapter, we will study steps \ref{step:prep}-\ref{step:release} in detail for CALock. We will introduce the lock request schema for CALock as well as a lock pool, which is used to detect conflicts between requests. We will discuss how we avoid typical \emph{time of check to time of use} (TOCTOU) race conditions between threads and specific optimizations made to the lock pool for fairness.
 
 
+\subsection{Lock request preparation: vertex labels and LGCA}
 
-% \section{Lock grain identification}
-% The lock grain of a set of target vertices in CALock is the smallest sub-graph that contains all the targets, such that all paths to these targets can be guarded against concurrent conflicting access. The guard corresponding to a lock request is the \emph{Lowest Guarding Common Ancestor} (LGCA) of the targets. As shown by Theorem \ref{proofOfDeepness}, the LGCA is the deepest vertex in the graph that is an ancestor of all the lock targets. It is present on all the paths that lead to the vertices to be locked and guards them. 
+After a hierarchy is preprocessed, threads start accessing data on vertices. This data access is a read or a write operation. Often, threads wish to access multiple vertices atomically. Once the set of vertices (lock targets) is identified, the thread accessing them needs to ensure isolation to guarantee correctness. To achieve this, it requests a lock on the \emph{Lowest Guarding Common Ancestor} (LGCA) of the set of lock targets. With CALock, this is done by taking the set intersection of the labels of the lock targets. It follows from \cref{proofOfDeepness} that the last element in this set intersection is the LGCA of the set of lock targets and is the root of the grain that contains the target vertices. 
 
-% In order to lock a set of vertices, the approach in CALock is to find the smallest subgraph that contains all the vertices to be locked such that all the paths to these vertices an be guarded to avoid race conditions. This achieved by finding the \emph{Lowest Guarding Common Ancestor} (LGCA) of the vertices to be locked. As shown in Theorem \ref{proofOfDeepness}, the LGCA is the deepest vertex in the graph that is an ancestor of all the lock targets. It is present on all the paths that lead to the vertices to be locked and guards them, serving as a lock \emph{guard}.
+For example, in \cref{calockexample}, to lock target vertices H and J, their LGCA is computed using the intersection of their labels, i.e., $\{A, C, H\} \cap \{A, C, G, J\} =  \{A,C\}$ in which is C is the deepest vertex. The thread then proceeds to acquire a lock on C. 
+
 
 \begin{figure}[h]
 	\centering
@@ -58,7 +346,7 @@ For example, in Figure \ref{calockexample}, to lock target vertices H and J, the
 	{\small
 		Lock on C: \{A,C\} with grain: \{F, G, H, I, J\}
 	}
-	\caption{CALock labels}
+	\caption{CALock labels with a lock on C (green) and its grain (yellow)}
 	\label{calockexample}
 \end{figure}
 
@@ -68,12 +356,12 @@ A lock request is created with data that identifies a grain without needing to t
 	\item \textbf{Thread ID}: The unique identifier of the thread making the lock request. This helps distinguish lock requests from different threads in the system.
 	\item \textbf{Guard ID}: The unique identifier of the lock guard, which corresponds to the vertex being locked to control access to a grain of the hierarchy.
 	\item \textbf{Guard label}: The label of the lock guard vertex.
-	\item \textbf{Sequence number}: A unique number the lock manager assigns to the lock request when it is added to the lock pool. This sequence number helps order lock requests and ensure lock acquisition fairness.
-	\item \textbf{Activity Indicator}: A boolean flag used by threads to monitor the status of a lock request. When a conflict occurs, threads use this indicator to determine whether they need to wait for the current lock request to complete.
-	\item \textbf{Lock mode}: Specifies the type of access the thread is requesting for the resource. This can be read (shared access, allowing concurrent reads) or write (exclusive access, preventing other reads or writes).
+	\item \textbf{Sequence number}: A unique number assigned to the lock request when it is added to the lock pool. This sequence number helps order lock requests and ensure lock acquisition fairness.
+	\item \textbf{Activity indicator}: A boolean flag used by threads to monitor the status of a lock request. When a conflict occurs, threads use this indicator to determine whether they must wait for the current lock request to complete.
+	\item \textbf{Lock mode}: Specifies the type of access the thread requests for the resource. This can be read (shared access, allowing concurrent reads) or write (exclusive access, preventing other reads or writes).
 \end{itemize}
 
-Each thread creates a lock request for every lock it wishes to acquire. A thread can only issue a single lock request at any given time, which might contain multiple targets. These lock requests are then added to a pool, which begins the lock acquisition process. 
+Using this data, a lock request is created by a thread. Since multiple lock targets are aggregated into a single grain using the LGCA of the targets, A thread requests a single lock at any given time. Lock requests are then added to a pool, which begins the lock acquisition process. 
 
 % These fields will be used to detect conflicts with other lock requests. 
 % As soon as the thread identifies the LGCA, it issues a lock request by adding its request to a pool used to identify conflicts. 
@@ -88,28 +376,18 @@ Each thread creates a lock request for every lock it wishes to acquire. A thread
 % }
 % \end{lstlisting}
 
-\section{Requesting a lock: Lock pool and lock conflicts}
-Once a thread has created a lock request object, it calls the \lstinline|LOCK()| function to add it to a pool, where it is tested for conflicts with other threads. Listing \ref{lockFunction} shows the procedure for acquiring a lock.
+\subsection{Requesting a lock: lock pool and lock conflicts}
+Once a thread has created a lock request object, it calls the \lstinline|LOCK()| function to add it to a pool, where it is tested for conflicts with other threads. \cref{lockFunction} shows the procedure for acquiring a lock.
 
-\subsection{Lock Pool}
+\subsubsection{Lock pool}
 The lock pool in CALock is a central data structure used to manage and coordinate lock requests from multiple threads. It is an array where each entry corresponds to a thread, and an entry in the lock pool at a thread's index indicates an active lock request from that thread.
 
 The first step taken by the scheduler is to assign a sequence number to the lock request (line \ref{seqNoAllocation}). Sequence numbers help ensure fairness by granting locks in a first-come, first-served order. Then, the activity indicator for a request is set to true, and finally, it is added to the pool at the requesting thread's index. 
 
 
-% When a thread requests a lock, it is assigned a sequence number and sets its activity indicator to true, signaling that it is actively using the lock. The lock pool helps detect conflicts between lock requests, and CALock uses the sequence numbers to ensure fairness by granting locks in a first-come, first-served manner. Threads check for conflicts and, if necessary, block until the active thread releases the lock, maintaining synchronization and preventing thread starvation.
-
-% The procedure of acquiring a lock is specified in listing \ref{lockfunction}. Initially and when the thread is not holding a lock, its entry is \inline|NULL|. When a thread arrives in the lock pool, it is given a sequence number (line \ref{seqNoAllocation}) and it sets its activity indicator to true (line \ref{waitTrue}) indicating that it is active and using the lock. In order to remain fair and prevent thread starvation, CALock uses sequence numbers to resolve conflicts. The \emph{sequence numbers} are an indication of the order in which the locks are requested. In the presence of conflicts, threads are granted locks in a \emph{first come first serve} order. Other threads check for conflicts with this thread and block until the activity indicator is set to false.
-% \begin{itemize}
-% 	\item \{\texttt{TID:1, GuardID:G, GuardLabel:\{A,C,G\}, SeqNo.:2, Active:true, Mode:read}\}
-% 	\item \{\texttt{TID:2}\}
-% \end{itemize}
-
-
-
 Guaranteeing an FCFS order to grant locks is essential to ensure fairness. However, a race condition might occur between two concurrent threads where a thread with a higher sequence number and conflicting request is granted a lock before a thread with a lower sequence number could add its request to the pool. 
 
-For example, as shown in Figure \ref{fig:raceCondition}, two threads $T_1$ and $T_2$, request a write lock on the same vertex $v$. Obviously, $T_1$ and $T_2$ cannot be granted their locks in parallel. One of them has to wait. $T_1$ is given sequence number 1 and $T_2$, which arrives after, is given sequence number 2. However, $T_1$ is preempted before it can insert its request into the pool, and $T_2$ adds its request first, tests for conflict, and finds no conflicting request in the pool. Then, $T_1$ resumes and inserts its entry into the lock pool. 
+For example, as shown in \cref{fig:raceCondition}, two threads $T_1$ and $T_2$ request a write lock on the same vertex $v$. Obviously, $T_1$ and $T_2$ cannot be granted their locks in parallel. One of them has to wait. $T_1$ is given sequence number 1 and $T_2$, which arrives after, is given sequence number 2. However, $T_1$ is preempted before it can insert its request into the pool, and $T_2$ adds its request first, tests for conflict, and finds no conflicting request in the pool. Then, $T_1$ resumes and inserts its entry into the lock pool. 
 Both $T_1$ and $T_2$ will be granted their requests even though they conflict. Vertex $v$ is not isolated anymore. This is because $T_2$ tested for a conflict while $T_1$ had not added its request to the pool, and $T_1$ assumes priority since it arrived first and has sequence number 1.
 
 \begin{figure}
@@ -132,24 +410,17 @@ Both $T_1$ and $T_2$ will be granted their requests even though they conflict. V
 
 Assigning a sequence number and adding the request to the pool is done atomically to avoid this race. We achieve this in our implementation with a mutex over the lock pool. Since these two operations are short, serializing threads with a mutex does not hinder performance. 
 
-% The order in which threads arrive is important to ensure fairness. To prevent a race condition where a thread with a higher sequence number and conflicting request is granted a lock before a thread with a lower sequence number could add its request to the pool, the assignment of a sequence number and the addition of the lock request to the pool is done atomically. 
 A lock request is guaranteed to be granted in FCFS order once it is added to the pool. After adding its request to the pool, a thread checks for conflicts with other requests.
 
+\subsubsection{Lock conflicts}
 
-% This is because the thread checks for conflicts with other requests in the pool from left to right. If a conflict is detected, the thread blocks and waits for the conflicting thread to release the lock. Once the lock is released, the thread proceeds to check for conflicts with the remaining threads in the pool. This process is repeated until the thread reaches the end of the lock pool. At this point, the thread is guaranteed to either have no conflicts or have priority over all conflicts because of its sequence number. We discuss this more in Chapter \ref{chap:formalProperties}.
-
-\subsection{Lock conflicts}
-
-
-% \section{Identifying lock conflicts} \label{lockPool}
-
-In MGL on graphs, conflict detection involves checking two conditions to ensure correctness. These conditions arise from locks at different granularities (sub-graphs). The compatibility matrix for CALock is shown in Table \ref{compatibilityMatrix}
+In MGL on graphs, conflict detection involves checking two conditions to ensure correctness. These conditions arise from locks at different granularities (sub-graphs). The compatibility matrix for CALock is shown in \cref{compatibilityMatrix}
 \begin{itemize}
-	\item \textbf{Grain Overlap}: A grain overlap conflict occurs between two lock requests when they are trying to lock overlapping grains. An overlap exists when the grains of the two lock requests have at least one common vertex. For example, if a thread is trying to lock a vertex, and another thread is holding a lock on a sub-graph that contains the vertex, the grains overlap. In this case, the finer-grained lock must be exclusive, meaning no conflicting lock can exist at a higher level.
+	\item \textbf{Grain overlap}: A grain overlap conflict occurs between two lock requests trying to lock overlapping grains. An overlap exists when the grains of the two lock requests have at least one common vertex. For example, if a thread is trying to lock a vertex, and another thread is holding a lock on a sub-graph that contains the vertex, the grains overlap. In this case, the finer-grained lock must be exclusive, meaning no conflicting lock can exist at a higher level.
 	
 	In CAlock, Grain overlaps are checked using the requests' guard ID and guard label. For two lock requests $R_1$ and $R_2$, if the guard ID of $R1$ is present in the guard label of $R_2$ or vice-versa, then the grains overlap.
 	
-	\item \textbf{Mode Conflict}: A mode conflict occurs when the grains protected by two lock guards overlap so that a writer’s lock would violate exclusivity. Specifically, if a writer attempts to lock a vertex or edge, and another lock already protects a grain containing said vertex/edge that overlaps with the writer’s lock, the two locks cannot coexist.
+	\item \textbf{Mode conflict}: A mode conflict occurs when the grains protected by two lock guards overlap so that a writer's lock would violate exclusivity. Specifically, if a writer attempts to lock a vertex or edge, and another lock already protects a grain containing said vertex/edge that overlaps with the writer's lock, the two locks cannot coexist.
 	
 	Mode conflict is checked by comparing the lock modes for requests in the lock pool. A mode conflict exists if one request is a write lock and the other is a read lock.
 \end{itemize}
@@ -184,29 +455,7 @@ In MGL on graphs, conflict detection involves checking two conditions to ensure 
 	\caption{Lock compatibilities between read ($rl$) and write ($wl$) locks requested by threads $i \neq j$ on vertices $x$ and $y$.}\label{compatibilityMatrix}
 \end{table}
 
-% In MGL on graphs, conflict detection is not as simple as testing for read/write conflicts. Since lock guards have a grain that they protect, it is necessary to ensure that the grain remains exclusive for a writer. With CALock, two conditions indicate a lock conflict. 
-
-% If both conditions hold for a pair of lock requests, they are in conflict. 
-
-% \begin{itemize}
-% 	\item The lock requests have a \textbf{mode conflict} i.e. a read/write conflict. 
-% 	\item The lock requests have a \textbf{grain overlap} i.e. they are trying to lock overlapping grains.
-% \end{itemize}
-
-% \subsubsection{Thread scheduling}
-
-% A thread that wants to lock a set of targets creates a lock request and adds it to a \emph{lock pool} for conflict detection. 
-% The request contains the following data.
-
-
-%The sequence number is assigned to the thread before the request is added to the pool. It is used to order the requests by their arrival order. The waiting condition is set to \inline|true| after the sequence number is assigned indicating that the thread is holding the lock. Another thread with conflicting request blocks and waits for this boolean value to change to \inline|false|.
-
-%Assignment of a sequence number, setting the wait condition and addition of the lock request to the pool is done atomically under a mutex to prevent the race where a new lock request with a conflicting operation and grain is granted before the conflict could be detected.
-
-% After the lock request is added to the pool, the thread checks for conflicts with other requests in the pool.
-
-
-A thread checks for grain overlap and mode conflict conditions (line \ref{conditionCheck}) against existing locks by iterating over the pool from left to right (Listing \ref{lockFunction} line \ref{conflictCheck}), ensuring deterministic conflict detection. This ordering guarantees fairness and prevents starvation by eliminating the risk of priority inversion.
+A thread checks for grain overlap and mode conflict conditions (line \ref{conditionCheck}) against existing locks by iterating over the pool from left to right (\cref{lockFunction} line \ref{conflictCheck}), ensuring deterministic conflict detection. This ordering guarantees fairness and prevents starvation by eliminating the risk of priority inversion.
 
 
 
@@ -232,27 +481,11 @@ A thread checks for grain overlap and mode conflict conditions (line \ref{condit
 	\centering
 	\captionsetup{justification=centering}
 	\includegraphics[width=.7\columnwidth]{figures/CALock_Lock_grains_inPool.png}
-	\caption{Lock grains on the hierarchy for the locks requested by the threads in the lock pool (Figure \ref{fig:lockPool})}
+	\caption{Lock grains on the hierarchy for the locks requested by the threads in the lock pool (\cref{fig:lockPool})}
 	\label{fig:lockGrainsOnHierarchy}
 \end{figure}
 
-Figure \ref{fig:lockPool} shows the snapshot of a lock pool. Figure \ref{fig:lockGrainsOnHierarchy} shows the grains on a hierarchy for the locks requested by threads in Figure \ref{fig:lockPool}. This pool contains requests from three threads $T_1, T_2$ and $T_7$. Suppose $T_7$ arrives first and is assigned sequence number 1. $T_1$ and $T_2$ arrive later and have sequence numbers 2 and 3, respectively. 
-
-% An example of a lock pool containing 3 requests from threads $T_1$, $T_2$ and $T_7$ is shown in Figure \ref{fig:lockPool}. 
-
-% \begin{table}[H]
-% 	\centering
-% 	\captionsetup{justification=centering}
-% 	\begin{tabular}{cccccc}
-% 		\textbf{Thread ID} & \textbf{Guard ID}& \textbf{Guard Label} & \textbf{Seq. No.} & \textbf{Active} & \textbf{Mode} \\
-% 		\hline
-% 		$1$ & G &\{A,C,G\} & 2 & true & read\\
-% 		$2$ & C &\{A,C\} & 3   & true & write\\
-% 		$7$ & B &\{A,B\} &  1  & true & read\\
-% 	\end{tabular}
-% 	\caption{Lock requests in the lock pool}
-% 	\label{lockPoolTable}
-% \end{table}
+A snapshot of a lock pool is shown in \cref{fig:lockPool}. The corresponding lock grains are shown in  \cref{fig:lockGrainsOnHierarchy}. This pool contains requests from three threads $T_1, T_2$ and $T_7$. Suppose $T_7$ arrives first and is assigned sequence number 1. $T_1$ and $T_2$ arrive later and have sequence numbers 2 and 3, respectively. 
 
 $T_1$, $T_2$ and $T_7$ iterate over the pool from left to right and check for conflicts. $T_1$ finds a conflicting request at index 1 but has priority in the conflict since its sequence number is lower. Beyond index 1, it has no conflict in the pool and proceeds to acquire a read lock on G.
 
@@ -263,7 +496,8 @@ $T_7$ does not conflict with any request and acquires a lock on B.
 
 
 While checking for conflicts, a thread blocks at each conflict it encounters if its sequence number is higher than the conflicting request. A higher sequence number indicates that the thread arrived later and should wait for the conflicting thread to release the lock. 
-Once a thread has iterated over the lock pool until the end, it is guaranteed to either have no conflicts with any request or have priority over all conflicts because its sequence number would be the lowest. We discuss this more in Chapter \ref{chap:formalProperties}.
+Once a thread has iterated over the lock pool until the end, it is guaranteed to either have no conflicts with any request or have priority over all conflicts because its sequence number would be the lowest. 
+% We discuss this more in \cref{chap:formalProperties}.
 
 % When requesting a lock, a thread $T$ can be blocked for a maximum of $n$ turns where $n$ is the size of the lock pool.
 % After at most $n$ blocks, the sequence number of $T$ will be the lowest among all requests in the lock pool. As such, it will be allowed to proceed since it will be the oldest request in the pool and should be served first according to the first come first served ordering. 
@@ -312,23 +546,13 @@ Once a thread has iterated over the lock pool until the end, it is guaranteed to
 
 
 
-\section{Metadata Maintenance: Structural modifications and relabelling}
+\section{Metadata maintenance: structural modifications and relabelling}
 
 In the earlier sections, we discussed data access. The scope of data access is limited to vertices. As such, data access requires locking only vertices. Now, we study structural modifications. Structural modifications change a graph's topology, such as adding or deleting vertices and edges. These modifications require careful handling to ensure consistency. This section will explore the mechanisms for locking and relabelling in CALock when structural modifications occur.
 
-The same CALock algorithm, shown in Figure \ref{lockFunction}, can be utilized for dynamic graphs that change at runtime. 
+The same CALock algorithm, shown in \cref{lockFunction}, can be utilized for dynamic graphs that change at runtime. 
 To perform a structural modification, a thread acquires a write lock on the LGCA of the affected vertices or the LGA if only one vertex is involved in a structural modification. For example, when adding an edge between vertices $u$ and $v$, a thread acquires a write lock on the LGCA of $u$ and $v$. 
 
-% The lock protocol for a structural modification involves the following steps:
-
-% \begin{enumerate}
-% 	\item \textbf{Lock grain identification}: Identifying the grain of the vertices being modified. This is done by finding the LGCA of the vertices.
-% 	\item \textbf{Lock request creation}: A lock request is created with the identified grain and \emph{write} mode.
-% 	\item \textbf{Lock conflict detection}: The thread checks for mode and grain conflicts with other lock requests in the pool.
-% 	\item \textbf{Operation execution}:	If no conflicts are detected, the thread proceeds to perform the structural modification. Vertices/edges are added or deleted.
-% 	\item \textbf{Grain Relabelling}: Due to a change in the topology, the labels of the vertices in the affected grain may need to be updated. This is done by recursively calling the \inline|BFLabel()| function on the children of the affected vertices.
-% 	\item \textbf{Lock release}: After relabelling terminates, the thread releases the lock on the grain.
-% \end{enumerate}
 
 A structural modification also involves a relabelling step for the affected grain. However, unlike DomLock, MID and FlexiGran, in which the relabelling happens by acquiring a write lock on the hierarchy, relabelling in CALock is done under the same lock acquired to perform the structural modification. 
 Here, we explain the locking and relabelling mechanism for dynamic graphs.
@@ -350,11 +574,11 @@ Deleting a vertex with no edges does not require synchronization either because 
 To delete a vertex that is reachable from the root, i.e., connected to the graph, a write lock is acquired on the LGA of the vertex to be deleted. 
 
 The LGA can be computed by taking the second-last element in the label of the vertex to be deleted. The LGA guards the grain containing this vertex. 
-Once the grain is locked, the vertex is disconnected from the graph by deleting all its edges and then deleted. Figure \ref{fig:calockdelete} shows an example where vertex F is deleted. To delete F, a lock is acquired on C, which is the second last vertex in the label of C and is the LGA of F.
+Once the grain is locked, the vertex is disconnected from the graph by deleting all its edges and then deleted. An example where vertex F is deleted is shown in \cref{fig:calockdelete}. To delete F, a lock is acquired on C, the second last vertex in the label of C, and is the LGA of F.
 
-After a vertex is deleted, relabelling might be necessary if the deleted vertex's descendants are still connected to the graph since the set of their ancestors has changed. Relabelling is done by recursively calling the function \inline|BFLabel()| in Algorithm \ref{labelAssignment} on the children of the deleted vertex. 
+After a vertex is deleted, relabelling might be necessary if the deleted vertex's descendants are still connected to the graph since the set of their ancestors has changed. Relabelling is done by recursively calling the function \inline|BFLabel()| in \cref{labelAssignment} on the children of the deleted vertex. 
 
-In Figure \ref{fig:calockdelete}, F has one child, H. So, the label of H is recomputed. After F is deleted, H has only one parent, G. So, the label of H is recomputed as $\{A, C, G, H\}$.
+In \cref{fig:calockdelete}, F has one child, H. So, the label of H is recomputed. After F is deleted, H has only one parent, G. So, the label of H is recomputed as $\{A, C, G, H\}$.
 
 
 
@@ -362,37 +586,176 @@ In Figure \ref{fig:calockdelete}, F has one child, H. So, the label of H is reco
 Adding and deleting an edge changes a graph's topology and the paths to the vertices. 
 Both operations are performed under a write (exclusive) lock. 
 
-To add an edge between a source vertex $u$ and a target vertex $v$, a write lock is acquired on the LGCA of $u$ and $v$. This LGCA is computed via a set intersection of the labels of $u$ and $v$, i.e. $L_u \cap L_v$. The last vertex in this intersection is the LGCA of $u$ and $v$, which needs to be write locked to isolate the grain containing both $u$ and $v$.
+To add an edge between a source vertex $u$ and a target vertex $v$, a write lock is acquired on the LGCA of $u$ and $v$. This LGCA is computed via a set intersection of the labels of $u$ and $v$, i.e. $L_u \cap L_v$. The last vertex in this intersection is the LGCA of $u$ and $v$, which needs to be write-locked to isolate the grain containing both $u$ and $v$.
 
 \begin{figure}[h]
 	\centering
 	\captionsetup{justification=centering}
 	\includegraphics[width=\columnwidth]{figures/CALock_Delete_Edge.png}
-	\caption{Deleting the edge between G and H requires a lock on C and relabelling of H}
+	\caption{Deleting the edge between G and H requires a lock on C and relabelling H}
 	\label{fig:calockedgedeletion}
 \end{figure}
 
-Once a write lock is acquired, the operation can be performed. Adding or deleting an edge between two vertices changes the ancestors of the target vertex, so relabelling is initiated at the target vertex of the affected edge using \inline|BFLabel()| function. Figure \ref{fig:calockedgedeletion} shows an example where an edge is deleted between G and H. Before deleting; a lock is acquired on C, which is the LGCA of G and H. After the edge is deleted, the target of the deleted edge, H, is relabelled. H has only one parent, F. So, the label of H is recomputed as $\{A, C, F, H\}$.
+Once a write lock is acquired, the operation can be performed. Adding or deleting an edge between two vertices changes the ancestors of the target vertex, so relabelling is initiated at the target vertex of the affected edge using \inline|BFLabel()| function. An example where an edge is deleted between G and H  is shown in \cref{fig:calockedgedeletion}. Before deleting, a lock is acquired on C, the LGCA of G and H. After the edge is deleted, the target of the deleted edge, H, is relabelled. H has only one parent, F. So, the label of H is recomputed as $\{A, C, F, H\}$.
 
 When a vertex $v$ has only one incoming edge, deleting that edge disconnects it from the graph. 
 In this case, relabelling can be omitted because the target vertex $v$ has no parents and is also not reachable from the root of the graph. 
 
 
-% \subsection{Relabeling}
 
-% Relabeling involves the same steps as the initial labeling but is performed on the lock grain. This lock grain is a subgraph $G' = (V', E')$ of the graph $G = (V, E)$ such that
-% \begin{itemize}
-% 	\item $V' \subseteq V$ and $v' = \lvert V' \rvert$
-% 	\item $E' \subseteq E \land ((v_1, v_2) \in E' \rightarrow v_1, v_2 \in V')$ and $e' = \lvert E' \rvert$
-% \end{itemize}
-
-% In most cases, the complexity of relabeling is proportional to the size of the grain i.e. $\theta(v'+ \frac{v'}{d_{avg}})$.
-% In the best case, only a single vertex is locked. So the complexity of relabeling is $\Omega(1)$.
-% In the worst case, $G' = G$ i.e. the whole graph is locked.
-% This leads to a complexity of $O(2v)$
+\section{Properties of CALock} \label{chap:formalProperties}
 
 
+A transaction uses the correctness guarantees of a locking protocol to assume certain guarantees regarding other transactions in the system. If all transactions adhere to the protocol, the system will remain correct.
 
-% \subsection{Conflict detection}
-% Detecting lock conflicts involves iterating over a list that contains, at each index, the information of the lock grain.
-% The complexity of iterating over the list is $O(n)$ where $n$ is the maximum number of threads.
+This section shows that CALock is safe, live and fair. 
+However, it's crucial to emphasize that the discussion of these formal properties only holds true value when the implementation of the locking algorithm is correct and the threads do not try to circumvent the locking protocol or act maliciously. 
+For instance, CALock requires the assignment of lock request sequence numbers, setting the activity indicator, and adding to the lock pool to happen atomically. In our implementation, we use a mutex to achieve this. 
+
+\subsection{Correctness guarantees}
+
+\subsubsection[Safety]{Safety}
+
+
+\paragraph{Property} A thread holding a write lock on a guard has exclusive access to the corresponding grain. Assuming all threads acquire the lock on a guard corresponding to the targets they access, the system guarantees that when a thread requests a write lock on a guard, the lock is granted iff no other thread can access the grain protected by this guard.
+
+\paragraph{Discussion} By contradiction, assume that two threads $T_1$ and $T_2$ are granted a write lock on the same vertex $v$. 
+Then, the lock pool would contain, at indices 1 and 2, two lock requests $R_1$ and $R_2$ with the same lock target $v$ and lock mode $wl$. However, they have different sequence numbers since a sequence number is assigned atomically before adding the corresponding request to the pool.
+
+Then, $T_1$ (resp. $T_2$) iterates over the pool to check for conflicts (Mode conflict, grain conflict). 
+Since all threads iterate over the pool from left to right, $T_1$ would detect a mode and grain conflict with $T_2$ and block at index 2 in the pool if its sequence number is greater than that of $T_2$. Respectively, $T_2$ would detect a mode and grain conflict with $T_1$ and block at index 1 in the pool if its sequence number is greater than that of $T_1$.
+Hence, $T_1$ and $T_2$ are never simultaneously granted a lock on $v$. Therefore, CALock is safe.
+
+\subsubsection[Liveness]{Liveness}
+\paragraph{Property} When a thread requests a lock, it is guaranteed to be granted the lock eventually, i.e., 
+the lock acquisition algorithm does not block forever, assuming every thread eventually releases the lock it holds.
+
+\paragraph{Discussion}
+The CALock protocol assumes every thread eventually releases the lock it holds. The lock pool prevents a thread from holding multiple locks since it only contains one position per thread. 
+If a thread wishes to lock multiple vertices, it consolidates them into a single request, a lock on their LGCA. 
+Since a thread holds at most one lock at any given time, deadlocks never occur as there is no circular wait.
+
+The absence of deadlocks combined with the assumed progress of threads ensures that CALock is live. 
+
+\subsubsection[Fairness]{Fairness}
+\paragraph{Property} When a thread requests a lock, it is guaranteed to be granted its request after being blocked at most $\mathit{n}$ times, where n is the number of positions in the lock pool. 
+The lock acquisition algorithm does not lead to a starvation of threads.
+
+\paragraph{Discussion}
+CALock uses a FIFO mechanism to grant locks. When a thread is blocked, it is always by a thread with a lower sequence number.
+Other threads can block a thread in the presence of conflicts at most $n$ times ($n$ is the size of the lock pool).  
+
+After a thread is bypassed at most $n$ times, the sequence number of that blocked thread would be the lowest, and the lock it requested would be granted. 
+This ensures that no thread starves and CALock is fair.
+
+
+\subsection{Complexity analysis of CALock} \label{complexityAnalysis}
+
+Beyond the correctness guarantees, the time complexity of the locking algorithm is crucial for its practical use in judging its suitability for various use cases. This section discusses the complexity of CALock labelling, relabelling and conflict detection and compares it with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}.
+
+\subsubsection{Labelling and relabelling}
+The labelling and relabelling algorithm involves two operations.
+\begin{itemize}
+	\item \textbf{Traversal}: Traversal to compute paths is a recursive BFS over the graph starting from the root. The number of edges examined is proportional to the average degree of vertices. In the worst case, where the graph is complete, the degree of any vertex is equal to the number of vertices in the graph. 
+	
+	\item \textbf{Label computation}: When a vertex is visited during traversal, the intersection of its parents' labels is calculated. The number of elements in the label of a vertex is inversely proportional to the number of its parents. Since the label of a vertex is the set of its guarding ancestors, which lie on all paths to a vertex, a vertex with more parents has more unique paths from the root and fewer guarding ancestors. Consequently, a vertex with more parents has a smaller label. We can approximate this in terms of the vertex degree as well. 
+\end{itemize}
+
+For a graph $G = (V, E)$, let $v = \lvert V \rvert$ be the number of vertices, $e = \lvert E \rvert$ the number of edges and $d_{avg}$ the average degree of a vertex. According to the Handshake lemma, the average degree of a vertex is 
+
+\begin{equation}
+	\mathit{d_{avg}} = \frac{2 \times e}{v} 
+\end{equation}
+
+% The maximum size of the label set is $v$ since, for a complete graph, all the vertices will be included in each label at the fix-point.
+
+The complexity of breadth-first traversal over a graph that contains $v$ vertices, with average degree $d_{avg}$ is:
+\begin{equation*}
+	T(\mathit{BFS}) =\theta(v + v.d_{avg}) 
+\end{equation*}
+
+The size of the label of a vertex is inversely proportional to the number of paths from the root it has, and consequently, the time complexity of the set intersection required for label computation is inversely proportional to the average degree, which is $\theta(\frac{1}{d_{avg}})$. 
+
+
+The combined complexity of these operations for labeling the entire hierarchy is 
+\begin{equation*}
+T(Labelling) = 	\theta((v + v.d_{avg}) \times {\frac{1}{d_{avg}}}) = \theta(v+ \frac{v}{d_{avg}})
+\end{equation*}
+
+
+In the best case, the graph contains only one vertex. The best case complexity is $\Omega(1)$.
+In the worst case, the average degree of vertices is 1. Thus, the worst-case complexity is $O(2v)$.
+
+
+\subsubsection{Lock guard computation and conflict detection}
+
+When a thread requests a lock, it computes the LGCA of the lock targets to be the guard and issues a lock request. 
+The LGCA is computed via a set intersection of the labels of the lock targets. 
+If the lock request is for $q$ lock targets ($q << v$) and the time complexity of computing the LGCA is $\theta(\frac{1}{d_{avg}})$, the complexity of finding the lock guard is:
+
+\begin{equation*}
+	T(Lock~Guard~Computation) = \theta(\frac{q}{d_{avg}})
+\end{equation*}
+
+% Since $q<<v$ for real-world applications, the average case complexity can be reduced to:
+
+% \begin{equation}
+% 	T(Lock~Guard~Computation) = \theta(\frac{1}{d_{avg}})
+% \end{equation}
+% % $\theta(\frac{v}{d_{avg}})$. 
+
+In the best case, the lock request is for a single vertex, which does not require LGCA computation, and the complexity is $\Omega(1)$. In the worst case, the lock request is for all graph vertices, and the complexity is $O(v)$. A thread checks conflicts with all other threads, i.e. $n$ times, where $n$ is the size of the lock pool. A set membership test is performed for each position in the lock pool. An efficient set implementation can test the membership in $O(1)$. The complexity of conflict detection is:
+ 
+ \begin{equation*}
+	 	T(Conflict~Detection) = \theta(n)
+ \end{equation*}
+
+
+\subsection{Complexity comparison}
+
+Based on the complexity analysis, we compare CALock with the other MGL techniques discussed in Chapter \ref{chap:relatedwork}. The average and worst-case complexities of the labelling, lock guard computation and conflict detection operations are summarized in Tables \ref{table:avgComplexity} and \ref{table:worstComplexity}, respectively.
+
+\newcolumntype{Z}{ >{\centering\arraybackslash}X }
+\begin{table}[h]
+	\centering
+	\captionsetup{justification=centering}
+	\begin{tabularx}{\textwidth}{r|*{4}{Z}}
+				 		& Labelling 						& Lock Guard computation		& Conflict detection\\
+						\hline
+		Intention Lock 	& -									& -								& $\theta(v+ v.{d_{avg}})$\\
+		DomLock 		& $\theta(v+ v.{d_{avg}})$  		& $\theta(v+ v.{d_{avg}})$ 		& $\theta(n)$\\
+		MID 			& $\theta(v+ v.{d_{avg}})$ 			& $\theta(v+ v.{d_{avg}})$ 		& $\theta(n)$\\
+		FlexiGran 		& $\theta(v+ v.{d_{avg}})$			& $\theta(v+ v.{d_{avg}})$		& $\theta(n \times (v+ v.{d_{avg}}))$ \\
+		CALock 			& $\theta(v+ \frac{v}{d_{avg}})$ 	& $\theta(\frac{q}{d_{avg}})$ 	& $\theta(n)$\\
+	\end{tabularx}\\~\\
+	\caption{Average case complexities of MGL techniques}
+	\label{table:avgComplexity}
+\end{table}
+
+\begin{table}[h]
+	\centering
+	\captionsetup{justification=centering}
+	\begin{tabularx}{\textwidth}{r|*{4}{Z}}
+				 		& Labelling 				& Lock Guard computation		& Conflict detection\\
+						\hline
+		Intention Lock 	& -							& -								& $O(v^2)$\\
+		DomLock 		& $O(v^2)$ 				 	& $O(v^2)$						& $O(n)$\\
+		MID 			& $O(v^2)$ 					& $O(v^2)$ 						& $O(n)$\\
+		FlexiGran 		& $O(v^2)$				 	& $O(v^2)$  					& $O(n v^2)$\\
+		CALock 			& $O(2v)$ 	 				& $O(v)$ 						& $O(n)$\\
+	\end{tabularx}\\~\\
+	\caption{Worst case complexities of MGL techniques ($n$ is the number of threads)}
+	\label{table:worstComplexity}
+\end{table}
+
+Since intention locks do not require metadata in the form of labelling, their complexity is only associated with conflict detection. Conflicts in Intention locks are detected by performing a DFS traversal over the graph. Consequently, the complexity of conflict detection is $\theta(v+ {v}.{d_{avg}})$.
+
+For label-based techniques, the labelling, and lock guard computation are proportional to the average degree of vertices. When labelling the hierarchy, all label-based techniques perform either a DFS or a BFS traversal over the graph and have the same time complexity.
+CALock, however, is linear in the number of vertices when computing the lock guard. This is because CALock uses a set intersection to compute the lock guard. DomLock, MID, and FlexiGran use integer intervals and then perform a DFS traversal to find the lock guard corresponding to the lock request. CALock labels can be computed faster than the integer intervals used by DomLock, MID and FlexiGran for very complex graphs. This results in a lower complexity for CALock in worst-case scenarios.
+
+
+\section{Summary}
+
+This chapter we presented CALock, a new labelling and multi-granularity locking protocol for hierarchical data. We discuss the theoretical underpinnings of CALock labelling and locking mechanisms using definitions of paths and common ancestors. We present a recursive labelling function used to label a hierarchy's vertices. Further, we discuss how the locking mechanism uses these labels to find an appropriate lock guard for a set of lock targets. CALock lock requests, which contain information about the lock guard, grain and lock mode, are added to a lock pool, which is used to detect conflicts. 
+
+We then discuss the formal properties of CALock. We show that CALock is safe, live and fair. Finally, we present the time complexities of different parts of the CALock lock mechanism and compare them with state-of-the-art MGL techniques. We show that CALock has a lower complexity than other MGL techniques in worst-case scenarios.
