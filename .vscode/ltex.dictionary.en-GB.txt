@@ -1,0 +1,16 @@
+CALock
+Pandey
+Sopena
+ComPas
+EuroSys
+parallelizable
+DomLock
+FlexiGran
+mutex
+iff
+DAGs
+LGCA
+TOCTOU
+TOCTOU
+STMBench
+std

@@ -1,3 +1,4 @@
+
 \PassOptionsToPackage{dvipsnames}{xcolor}
 % **************************************************
 % Document Class Definition
@@ -112,9 +113,9 @@
 \cleardoublepage
 
 \pagestyle{plain}				% display just page numbers
-%
-% \input{content/front/remerciements.tex} % INCLUDE: acknowledgement
-% \cleardoublepage
+
+\input{content/front/remerciements.tex} % INCLUDE: acknowledgement
+\cleardoublepage
 %
 \input{content/front/abstract-en}	% INCLUDE: the abstracts (english)
 \clearpage
@@ -122,10 +123,9 @@
 \cleardoublepage
 %
 \currentpdfbookmark{\contentsname}{toc}
-\setcounter{tocdepth}{2}		% define depth of toc
+\setcounter{tocdepth}{2}% define depth of toc
 \dominitoc \tableofcontents	
 \cleardoublepage
-
 % \newcommand{\Ra}{\textbf{R\textsubscript{VGuard }}}
 \newcommand{\Rb}{\textbf{R\textsubscript{Grain }}}
 \newcommand{\Rc}{\textbf{R\textsubscript{Conflict }}}
@@ -139,10 +139,12 @@
 \pagestyle{empty}				% no header or footers
 \pagenumbering{arabic}			% arabic page numbering starts from Body
 \pagestyle{scrheadings}			% header and footer style
-
+\cleardoublepage
+\addcontentsline{toc}{chapter}{\listfigurename}
 \listoffigures
 \cleardoublepage
 
+\addcontentsline{toc}{chapter}{\listtablename}
 \listoftables
 \cleardoublepage
 

@@ -1,0 +1,2 @@
+{"rule":"A_INFINITIVE","sentence":"^\\QA read lock on a grain allows other transactions to acquire read locks on the same grain but prevents any transaction from acquiring a write lock.\\E$"}
+{"rule":"ENGLISH_WORD_REPEAT_BEGINNING_RULE","sentence":"^\\QIn this set of benchmarks, we study data updates and structural modifications.\\E$"}

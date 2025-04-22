@@ -1,6 +1,5 @@
 \chapter{Related work} \label{chap:relatedwork}
 
-\minitoc
 
 Multi-granularity locking is a well-known solution to the problem of hierarchical locking in database systems. 
 With MGL, locking a vertex in a hierarchy in a specific mode implicitly locks its descendants in the same mode. 
@@ -8,10 +7,10 @@ This powerful concept allows for efficient locking of hierarchical data structur
 While powerful, implementing an MGL protocol that successfully achieves this goal is non-trivial. 
 
 
-The locking approaches discussed in this chapter use different mechanisms to address the requirements specified in \cref{chap:background}, each with its tradeoffs. 
+The locking approaches discussed in this chapter use different mechanisms to address the requirements specified in \cref{chap:background}, each with its trade-offs. 
 It would be appropriate to claim that no approach is all-encompassing, and the locking approach choice depends on the application's specific requirements and the hierarchy being used. We present each lock mechanism's strengths, weaknesses and niche.
 
-Finally, we present the tradeoffs between them and motivate the need for a new hierarchical locking protocol that addresses the existing protocols' limitations by classifying them based on the requirements they fulfil.
+Finally, we present the trade-offs between them and motivate the need for a new hierarchical locking protocol that addresses the existing protocols' limitations by classifying them based on the requirements they fulfil.
 
 
 \section{Classical locking approaches for connected data}
@@ -120,7 +119,7 @@ The protocol requires that threads place these locks in a depth-first manner. Th
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=0.6\textwidth]{figures/IntentionLockExample.png}
-    \caption{Multi granularity locking using intention locks. \\ $T_1$ takes an exclusive lock on vertex $D$ and $T_2$ takes an exclusive lock on vertex $G$ }
+    \caption{Multi granularity locking using intention locks. \\ $T_1$ takes an exclusive lock on vertex $D$ and $T_2$ takes an exclusive lock on vertex $G$. }
     \label{fig:intention_lock_example}
 \end{figure}
 
@@ -146,7 +145,7 @@ In the example of \cref{fig:intention_lock_example}, $T_1$ must perform the foll
     \item $A \rightarrow C \rightarrow D$
 \end{itemize}
 
-Once a thread has acquired the lock and performed the necessary accesses, it releases the locks from the leaves to the root. This, again, requires traversals. In the example in \cref{fig:intention_lock_example}, $T_1$ must release the X locks on $D$ and $G$, respectively. Then, backtrack towards the root to release the IX locks on $B$ and $C$ and finally release the IX lock on $A$. This involves the following two traversals:
+Once a thread has acquired the lock and performed the necessary accesses, it releases the locks from the leaves to the root. This, again, requires traversals. In the example in \cref{fig:intention_lock_example}, $T_1$ must release the X lock on $D$. Then, backtrack towards the root to release the IX locks on $B$ and $C$ and finally release the IX lock on $A$. This involves the following two traversals:
 
 \begin{itemize}
     \item $D \rightarrow B \rightarrow A$
@@ -164,7 +163,7 @@ This leads to a significant performance degradation. Along with the added perfor
 So, while intention locks fulfil requirement \Rb, requirement \Rc incurs a significant performance penalty. 
 
 \subsection{DomLock}
-DomLock \cite{kalikar2016domlock} is an MGL technique that uses the concept of \emph{dominators} to identify lock grains instead of relying on explicitly locking paths that lead to a target. A dominator is a vertex on all paths from the root to a target vertex $v$. A dominator is thus an effective lock guard for its descendants since locking a dominator is sufficient to lock all the paths to $v$ (and the descendants of $v$).
+DomLock \cite{kalikar2016domlock} is an MGL technique that uses the concept of \emph{dominators} to identify lock grains instead of relying on explicitly locking paths that lead to a target. A dominator is a vertex on all paths from the root to a target vertex $v$. A dominator is thus, an effective lock guard for its descendants since locking a dominator is sufficient to lock all the paths to $v$ (and the descendants of $v$).
 
 \begin{definition}[\textbf{Dominator}]
     A vertex $d$ is a dominator of another vertex $v$ if all the paths from the root to $v$ pass through d.
@@ -231,7 +230,7 @@ To test for a \textbf{grain conflict} between two lock requests, the intervals o
 
 \subsubsection{Metadata maintainance}
 
-Another drawback of DomLock is that it does not support dynamic hierarchies without relabeling a large part of the hierarchy.
+Another drawback of DomLock is that it does not support dynamic hierarchies without relabelling a large part of the hierarchy.
 Since intervals are used to identify lock grains, they must be recomputed when a structural modification occurs.
 % The intervals of the vertices are computed once via a post-order traversal. When a vertex is added or removed from the hierarchy, this computation has to be redone. 
 
@@ -239,14 +238,14 @@ Since intervals are used to identify lock grains, they must be recomputed when a
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=0.6\textwidth]{figures/domlock_example_with_SM.png}
-    \caption{DomLock interval recomputation for a vertex insertion}
+    \caption{DomLock interval re-computation for a vertex insertion.}
     \label{fig:domlock_example_SM}
 \end{figure}
 
-For example, consider the hierarchy in \cref{fig:domlock_example_SM}. If a vertex $K$ is added as a child of $G$ after $H$, $K$ can only have interval $[4,4]$. This forces $I$ and $J$ to get interval $[5,5]$ and the interval of $G$ must be recomputed to $[3,5]$. This recomputation has to be done for all the ancestors of $G$ as well up to the root of. 
+For example, consider the hierarchy in \cref{fig:domlock_example_SM}. If a vertex $K$ is added as a child of $G$ after $H$, $K$ can only have interval $[4,4]$. This forces $I$ and $J$ to get interval $[5,5]$ and the interval of $G$ must be recomputed to $[3,5]$. This re-computation has to be done for all the ancestors of $G$ as well up to the root of. 
 
-Furthermore, this recomputation might not be parallelizable with any other access. Since the interval of the root is recomputed as well, any other operation, whether read, write or structural modification, has to wait until the recomputation of the root is complete. 
-A structural modification is performed under a write lock on the root of a hierarchy to prevent concurrent accesses from interfering with the recomputation. This blocks all other accesses until the structural modification and the interval recomputation is complete. 
+Furthermore, this re-computation might not be parallelizable with any other access. Since the interval of the root is recomputed as well, any other operation, whether read, write or structural modification, has to wait until the re-computation of the root is complete. 
+A structural modification is performed under a write lock on the root of a hierarchy to prevent concurrent accesses from interfering with the re-computation. This blocks all other accesses until the structural modification and the interval re-computation is complete. 
 
 % In dynamic hierarchies with structural modifications can lead to a significant performance penalty due to the lack of parallelism in the relabelling. 
 
@@ -316,7 +315,7 @@ MID encounters double the penalty for recomputing vertex labels in dynamic hiera
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=0.6\textwidth]{figures/MID_example_with_SM.png}
-    \caption{MID interval recomputation for a vertex insertion}
+    \caption{MID interval re-computation for a vertex insertion.}
     \label{fig:MID_example_SM}
     
 \end{figure}
@@ -324,11 +323,11 @@ MID encounters double the penalty for recomputing vertex labels in dynamic hiera
 For example, when vertex $K$ is inserted as a child of $G$ as shown in \cref{fig:MID_example_SM}, at least one interval for every vertex is recomputed. These intervals are then propagated to the root of the hierarchy. Compared to DomLock, MID relabels more vertices for the same structural modification. 
 
 
-Like DomLock, a structural modification is performed under a write lock on the root of the hierarchy to prevent concurrent reads from interfering with the recomputation.
+Like DomLock, a structural modification is performed under a write lock on the root of the hierarchy to prevent concurrent reads from interfering with the re-computation.
 
-% the hierarchy is guarded by a mutex until the recomputation is complete.
+% the hierarchy is guarded by a mutex until the re-computation is complete.
 
-MID tries to reduce false subsumptions w.r.t to DomLock but does not eliminate them completely. The performance penalty for recomputation in dynamic hierarchies is significantly higher in MID than in DomLock. As such, MID fulfils requirement \Rb but incurs even severe penalties, compared to DomLock, against requirements \Rc and \Rd.
+MID tries to reduce false subsumptions w.r.t to DomLock but does not eliminate them completely. The performance penalty for re-computation in dynamic hierarchies is significantly higher in MID than in DomLock. As such, MID fulfils requirement \Rb but incurs even severe penalties, compared to DomLock, against requirements \Rc and \Rd.
 
 \subsection{Flexible granularity locking (FlexiGran)}
 
@@ -340,7 +339,7 @@ FlexiGran uses the DomLock intervals as vertex labels and uses vertex depth to d
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=0.5\textwidth]{figures/flexigran_example_with_lock.png}
-    \caption{FlexiGran labels and vertex depth with lock on guard $G$ with the grain of the lock (yellow)}
+    \caption{FlexiGran labels and vertex depth with lock on guard $G$ with the grain of the lock (yellow).}
     \label{fig:flexigran_example_locked}
 \end{figure}
 
@@ -357,7 +356,9 @@ If a thread requests a fine-grain lock, then a read/write lock is directly reque
 
 Since fine-grain and MGL locks can exist in FlexiGran, testing lock conflicts involves multiple steps. \cref{tab:flexigran_locks} shows the compatibility matrix for FlexiGran locks. \textbf{F} and \textbf{H} indicate the kind of lock acquired, fine-grain lock and multi-granularity lock, respectively. \textbf{R} and \textbf{W} indicate the lock mode. So, \textbf{FR} is a fine-grain read lock.
 
-When checking if two MGL locks are compatible, the intervals of their guards are tested for overlap. Disjoint intervals indicate that the two locks are DomLock compatible. When checking two fine-grain locks for conflict, the lock guards for the lock requests are compared. If two fine-grain lock requests are on the same vertex, they conflict if at least one of the requests is for a write lock.
+When checking if two MGL locks are compatible, the intervals of their guards are tested for overlap. Disjoint intervals indicate that the two locks are DomLock compatible. When checking two fine-grain locks for conflict, the lock guards for the lock requests are compared. 
+% When an overlap is detected, the levels are checked to ensure that the overlap is topological and not a false positive due to the order in which intervals are assigned. 
+If two fine-grain lock requests are on the same vertex, they conflict if at least one of the requests is for a write lock.
 
 
 \begin{table}[h]
@@ -383,13 +384,13 @@ For example, in \cref{fig:flexigran_example_locked}, a hierarchical lock is acqu
 
 \subsubsection{Metadata maintenance}
 
-Like DomLock, structural modifications in FlexiGran require recomputation of the intervals of the vertices. A single post-order traversal is enough to recompute the intervals and depths of vertices. 
+Like DomLock, structural modifications in FlexiGran require re-computation of the intervals of the vertices. A single post-order traversal is enough to recompute the intervals and depths of vertices. 
 
 Like DomLock, a structural modification with FlexiGran is performed by acquiring a write lock on the root of the hierarchy since the root might be relabelled.
 
-In summary, FlexiGran fulfils requirement \Rb and incurs a significant performance penalty against requirement \Rc due to the expensive compatibility checks required to detect conflicts between MGL and fine-grain locks. FlexiGran also incurs a performance penalty against requirement \Rd due to the non-parallel recomputation of intervals in dynamic hierarchies.
+In summary, FlexiGran fulfils requirement \Rb and incurs a significant performance penalty against requirement \Rc due to the expensive compatibility checks required to detect conflicts between MGL and fine-grain locks. FlexiGran also incurs a performance penalty against requirement \Rd due to the non-parallel re-computation of intervals in dynamic hierarchies.
 
-
+\newpage
 
 \section{Trade-offs between state-of-the-art techniques}
 
@@ -404,7 +405,7 @@ Recall the primary requirements identified for MGL:
     \centering
     \captionsetup{justification=centering}
     \includegraphics[width=.9\textwidth]{figures/MGL_comparision.png}
-    \caption{Tradeoffs in MGL techniques}
+    \caption{Trade-offs in MGL techniques.}
     \label{fig:tradeoffs}
 \end{figure}
 
@@ -427,13 +428,13 @@ MGL based only on paths, like Intention Lock, fulfils requirement \Rb but incurs
         CALock & \cellcolor{green!25} Y & \cellcolor{green!25} Y & \cellcolor{green!25} Y \\
         
     \end{tabular}
-    \caption{Comparison of MGL techniques against requirements}\label{tab:tradeoffs}
+    \caption{Comparison of MGL techniques against requirements.}\label{tab:tradeoffs}
 \end{table}
 
 MGL, using labels based on a vertex order such as DomLock, MID and FlexiGran, fulfils requirement \Rb and incurs a penalty due to false subsumptions. In addition, due to the metadata required to implement the locking protocol, these techniques incur a performance penalty against requirement \Rd when structural modifications occur. 
 
 
-\cref{fig:tradeoffs} and \cref{tab:tradeoffs} show the tradeoffs in the different MGL techniques. Intention locks offer the smallest lock grains at the cost of lock conflict detection. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains than others but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to a balanced MGL protocol.
+\cref{fig:tradeoffs} and \cref{tab:tradeoffs} show the trade-offs in the different MGL techniques. Intention locks offer the smallest lock grains at the cost of lock conflict detection. DomLock and MID offer efficient conflict detection at the cost of metadata management. FlexiGran offers better lock grains than others but incurs a performance penalty due to the expensive lock conflict detection. None of the techniques balances all the requirements to come close to a balanced MGL protocol.
 
 
 
@@ -449,7 +450,7 @@ Other MGL techniques use labelling strategies that identify an ordering of verti
 
 
 \subsection{Unified path and label based techniques}
-Unified techniques for labelling are explored in literature in the domain of metadata management for large-scale, efficient searching applications. The Dewey Decimal System \cite{DBLP:journals/jd/Sweeney83} is the earliest example of a path-based labelling technique used to identify elements of a hierarchy based on their subclassification. Other path-based techniques use similar representations of paths. 
+Unified techniques for labelling are explored in literature in the domain of metadata management for large-scale, efficient searching applications. The Dewey Decimal System \cite{DBLP:journals/jd/Sweeney83} is the earliest example of a path-based labelling technique used to identify elements of a hierarchy based on their sub-classification. Other path-based techniques use similar representations of paths. 
 
 A path-based labelling technique that preserves the topological ordering of vertices in the labels and facilitates efficient locking would be an ideal solution. However, the additional metadata required to implement this unified technique should not be prohibitively expensive. DomLock and its successors sacrifice labelling performance for locking performance to an extent that makes them unusable for hierarchies that undergo structural modifications. CALock labelling scheme balances maintaining both topological information of the hierarchy while efficiently locking and relabelling. 
 

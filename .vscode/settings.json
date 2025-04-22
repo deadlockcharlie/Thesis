@@ -2,7 +2,11 @@
     "latex-workshop.latex.autoBuild.run": "onSave",
     "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
     "cSpell.words": [
+        "Akka",
         "Asterix",
+        "bassm",
+        "cassm",
+        "cpart",
         "FCFS",
         "flexigran",
         "Multicore",
